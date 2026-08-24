@@ -1,0 +1,11 @@
+demo_home:
+    path: /
+    controller: App\Controller\DemoController::home
+    methods: [GET, POST]
+
+when@dev:
+    nowo_twig_inspector:
+        resource: '@NowoTwigInspectorBundle/Resources/config/routes.yaml'
+
+nowo_whatsapp_business:
+    resource: '@WhatsappBusinessBundle/Resources/config/routing.yaml'
