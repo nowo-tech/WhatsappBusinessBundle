@@ -1,0 +1,34 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}WhatsApp Business Bundle — Demo{% endblock %}
+
+{% block body %}
+    <h1>WhatsappBusinessBundle</h1>
+    <p><span class="badge">{{ version_badge }}</span> · FrankenPHP worker-safe Cloud API client</p>
+
+    <p>
+        Profile timeouts (REQ-RUNTIME-001):
+        <code>timeout={{ timeout }}s</code>,
+        <code>connect_timeout={{ connect_timeout }}s</code>,
+        <code>transport={{ transport }}</code>
+    </p>
+
+    {{ form_start(form) }}
+        {% for child in form %}
+            {% if not child.rendered %}
+                {{ form_row(child) }}
+            {% endif %}
+        {% endfor %}
+        <button type="submit">Send text (mock)</button>
+    {{ form_end(form) }}
+
+    {% if message_id %}
+        <h2>Result</h2>
+        <p>Message id: <code>{{ message_id }}</code></p>
+    {% endif %}
+
+    <section>
+        <h2>Webhook</h2>
+        <p>GET/POST <code>/whatsapp/webhook</code> (unsigned allowed in this mock demo).</p>
+    </section>
+{% endblock %}

@@ -1,0 +1,12 @@
+nowo_whatsapp_business:
+    default_profile: default
+    profiles:
+        default:
+            transport: mock
+            phone_number_id: '%env(WHATSAPP_PHONE_NUMBER_ID)%'
+            access_token: '%env(WHATSAPP_ACCESS_TOKEN)%'
+            whatsapp_business_account_id: '%env(default::WHATSAPP_BUSINESS_ACCOUNT_ID)%'
+            webhook_verify_token: '%env(default::WHATSAPP_WEBHOOK_VERIFY_TOKEN)%'
+            timeout: 10.0
+            connect_timeout: 5.0
+            allow_unsigned_webhooks: true
