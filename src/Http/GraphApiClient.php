@@ -1,0 +1,158 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Nowo\WhatsappBusinessBundle\Http;
+
+use Nowo\WhatsappBusinessBundle\Config\CloudApiProfile;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
+use Symfony\Component\Mime\Part\DataPart;
+use Symfony\Component\Mime\Part\Multipart\FormDataPart;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+
+use function ceil;
+use function defined;
+use function extension_loaded;
+use function is_array;
+use function ltrim;
+use function rtrim;
+use function sprintf;
+
+use const CURLOPT_CONNECTTIMEOUT;
+
+/**
+ * Low-level Graph HTTP client. Does not log tokens or request bodies.
+ *
+ * @author Héctor Franco Aceituno <hectorfranco@nowo.tech>
+ * @copyright 2026 Nowo.tech
+ */
+final readonly class GraphApiClient
+{
+    public function __construct(
+        private HttpClientInterface $httpClient,
+        private CloudApiProfile $profile,
+        private LoggerInterface $logger = new NullLogger(),
+    ) {
+    }
+
+    /**
+     * @param array<string, mixed> $json
+     *
+     * @return array<string, mixed>
+     */
+    public function postJson(string $path, array $json): array
+    {
+        return $this->request('POST', $path, [
+            'json' => $json,
+        ]);
+    }
+
+    /**
+     * @param array<string, scalar|null> $query
+     *
+     * @return array<string, mixed>
+     */
+    public function get(string $path, array $query = []): array
+    {
+        return $this->request('GET', $path, [
+            'query' => $query,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function delete(string $path): array
+    {
+        return $this->request('DELETE', $path);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function postMedia(string $path, string $filePath, string $mimeType): array
+    {
+        $form = new FormDataPart([
+            'messaging_product' => 'whatsapp',
+            'type'              => $mimeType,
+            'file'              => DataPart::fromPath($filePath, null, $mimeType),
+        ]);
+
+        return $this->request('POST', $path, [
+            'headers' => $form->getPreparedHeaders()->toArray(),
+            'body'    => $form->bodyToIterable(),
+        ]);
+    }
+
+    public function downloadRaw(string $url): string
+    {
+        try {
+            return $this->httpClient->request('GET', $url, [
+                'timeout'      => $this->profile->timeout,
+                'max_duration' => $this->profile->timeout,
+                'headers'      => [
+                    'Authorization' => 'Bearer ' . $this->profile->accessToken,
+                ],
+            ])->getContent();
+        } catch (TransportExceptionInterface $exception) {
+            $this->logger->error('WhatsApp media download failed.', [
+                'profile' => $this->profile->name,
+            ]);
+            throw GraphApiException::fromGraph(['error' => ['message' => $exception->getMessage()]], 0);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @return array<string, mixed>
+     */
+    private function request(string $method, string $path, array $options = []): array
+    {
+        $url = sprintf(
+            '%s/%s/%s',
+            rtrim($this->profile->graphBaseUri, '/'),
+            $this->profile->graphVersion,
+            ltrim($path, '/'),
+        );
+
+        $options['timeout']      = $this->profile->timeout;
+        $options['max_duration'] = $this->profile->timeout;
+        if (extension_loaded('curl') && defined('CURLOPT_CONNECTTIMEOUT')) {
+            $options['extra']['curl'][CURLOPT_CONNECTTIMEOUT] = (int) ceil($this->profile->connectTimeout);
+        }
+        $headers = $options['headers'] ?? [];
+        if (!is_array($headers)) {
+            $headers = [];
+        }
+        $headers['Authorization'] = 'Bearer ' . $this->profile->accessToken;
+        $headers['Accept']        = $headers['Accept'] ?? 'application/json';
+        $options['headers']       = $headers;
+
+        try {
+            $response = $this->httpClient->request($method, $url, $options);
+            $status   = $response->getStatusCode();
+            $payload  = $response->toArray(false);
+        } catch (TransportExceptionInterface $exception) {
+            $this->logger->error('WhatsApp Cloud API transport failure.', [
+                'profile' => $this->profile->name,
+                'method'  => $method,
+                'path'    => $path,
+            ]);
+            throw GraphApiException::fromGraph(['error' => ['message' => $exception->getMessage()]], 0);
+        }
+
+        if ($status >= 400 || isset($payload['error'])) {
+            $this->logger->warning('WhatsApp Cloud API error.', [
+                'profile' => $this->profile->name,
+                'status'  => $status,
+                'path'    => $path,
+            ]);
+            throw GraphApiException::fromGraph($payload, $status);
+        }
+
+        return $payload;
+    }
+}

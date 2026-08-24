@@ -1,0 +1,13 @@
+nowo_whatsapp_business_webhook:
+    path: /whatsapp/webhook
+    controller: Nowo\WhatsappBusinessBundle\Webhook\WebhookController
+    methods: [GET, POST]
+    defaults:
+        profile: null
+
+nowo_whatsapp_business_webhook_profile:
+    path: /whatsapp/webhook/{profile}
+    controller: Nowo\WhatsappBusinessBundle\Webhook\WebhookController
+    methods: [GET, POST]
+    requirements:
+        profile: '[a-zA-Z0-9_-]+'

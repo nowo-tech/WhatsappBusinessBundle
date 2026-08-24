@@ -1,0 +1,10 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    Nowo\WhatsappBusinessBundle\Webhook\WebhookVerifier: ~
+    Nowo\WhatsappBusinessBundle\Webhook\WebhookParser: ~
+    Nowo\WhatsappBusinessBundle\Webhook\WebhookController:
+        tags: ['controller.service_arguments']
