@@ -1,0 +1,2 @@
+nowo_whatsapp_business:
+    resource: '@WhatsappBusinessBundle/Resources/config/routing.yaml'

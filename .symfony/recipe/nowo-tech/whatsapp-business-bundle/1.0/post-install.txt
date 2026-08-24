@@ -1,0 +1,16 @@
+WhatsApp Business Bundle (Cloud API client + signed webhooks) has been installed.
+
+Configure named profiles in config/packages/nowo_whatsapp_business.yaml.
+
+Required environment variables:
+  WHATSAPP_PHONE_NUMBER_ID
+  WHATSAPP_ACCESS_TOKEN
+
+Optional:
+  WHATSAPP_BUSINESS_ACCOUNT_ID   (template listing)
+  WHATSAPP_APP_SECRET            (X-Hub-Signature-256)
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN  (GET hub.verify_token)
+
+Webhook endpoint: /whatsapp/webhook (and /whatsapp/webhook/{profile})
+
+Never commit access tokens or app secrets.
