@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Nowo\WhatsappBusinessBundle;
+
+use Nowo\WhatsappBusinessBundle\DependencyInjection\WhatsappBusinessExtension;
+use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
+use Symfony\Component\HttpKernel\Bundle\Bundle;
+
+/**
+ * WhatsApp Cloud API (Business) client, webhooks, and named profiles for Symfony.
+ *
+ * @author Héctor Franco Aceituno <hectorfranco@nowo.tech>
+ * @copyright 2026 Nowo.tech
+ */
+final class WhatsappBusinessBundle extends Bundle
+{
+    public function getContainerExtension(): ExtensionInterface
+    {
+        if (!$this->extension instanceof WhatsappBusinessExtension) {
+            $this->extension = new WhatsappBusinessExtension();
+        }
+
+        return $this->extension;
+    }
+}

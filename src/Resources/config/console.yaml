@@ -1,0 +1,8 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    Nowo\WhatsappBusinessBundle\Command\SendTextCommand: ~
+    Nowo\WhatsappBusinessBundle\Command\ListTemplatesCommand: ~
