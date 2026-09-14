@@ -60,6 +60,7 @@ final class WebhookControllerTest extends TestCase
     {
         $response = ($this->controller())(Request::create('/whatsapp/webhook/nope', 'GET'), 'nope');
         self::assertSame(404, $response->getStatusCode());
+        self::assertSame('Unknown WhatsApp Business profile.', $response->getContent());
     }
 
     public function testPostSigned(): void
@@ -95,7 +96,9 @@ final class WebhookControllerTest extends TestCase
         $request = Request::create('/whatsapp/webhook', 'POST', [], [], [], [
             'HTTP_X_HUB_SIGNATURE_256' => 'sha256=dead',
         ], '{}');
-        self::assertSame(403, ($this->controller())($request)->getStatusCode());
+        $response = ($this->controller())($request);
+        self::assertSame(403, $response->getStatusCode());
+        self::assertSame('Invalid WhatsApp webhook signature.', $response->getContent());
     }
 
     public function testEmptyProfileUsesDefault(): void

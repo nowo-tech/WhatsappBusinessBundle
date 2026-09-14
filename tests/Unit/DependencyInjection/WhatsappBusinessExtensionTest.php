@@ -56,10 +56,14 @@ final class WhatsappBusinessExtensionTest extends TestCase
         ]], $container);
 
         self::assertSame(CloudApiProfile::class, $container->getDefinition('nowo_whatsapp_business.profile.prod')->getClass());
+        self::assertFalse($container->getDefinition('nowo_whatsapp_business.profile.prod')->isPublic());
+        self::assertFalse($container->getDefinition('nowo_whatsapp_business.graph.prod')->isPublic());
+        self::assertFalse($container->getDefinition('nowo_whatsapp_business.transport.prod')->isPublic());
         $args = $container->getDefinition('nowo_whatsapp_business.profile.prod')->getArguments();
         self::assertNull($args['$whatsappBusinessAccountId']);
         self::assertNull($args['$appSecret']);
         self::assertNull($args['$webhookVerifyToken']);
+        self::assertFalse($container->getDefinition('nowo_whatsapp_business.client.prod')->isPublic());
         self::assertSame(GraphApiClient::class, $container->getDefinition('nowo_whatsapp_business.graph.prod')->getClass());
         self::assertSame(CloudApiTransport::class, $container->getDefinition('nowo_whatsapp_business.transport.prod')->getClass());
         self::assertSame('nowo_whatsapp_business', (new WhatsappBusinessExtension())->getAlias());

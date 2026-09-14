@@ -114,6 +114,7 @@ final class WhatsappBusinessExtension extends Extension
             '$allowUnsignedWebhooks'     => (bool) $profileConfig['allow_unsigned_webhooks'],
         ]);
         $profileId = sprintf('nowo_whatsapp_business.profile.%s', $name);
+        $profileDef->setPublic(false);
         $container->setDefinition($profileId, $profileDef);
 
         $transportKind = TransportKind::from((string) $profileConfig['transport']);
@@ -129,6 +130,7 @@ final class WhatsappBusinessExtension extends Extension
                 '$logger'     => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
             ]);
             $graphId = sprintf('nowo_whatsapp_business.graph.%s', $name);
+            $graph->setPublic(false);
             $container->setDefinition($graphId, $graph);
 
             $transport = new Definition(CloudApiTransport::class, [
@@ -138,6 +140,7 @@ final class WhatsappBusinessExtension extends Extension
         }
 
         $transportId = sprintf('nowo_whatsapp_business.transport.%s', $name);
+        $transport->setPublic(false);
         $container->setDefinition($transportId, $transport);
 
         $client = new Definition(WhatsappClient::class, [
@@ -147,6 +150,7 @@ final class WhatsappBusinessExtension extends Extension
             '$logger'          => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
         ]);
         $clientId = sprintf('nowo_whatsapp_business.client.%s', $name);
+        $client->setPublic(false);
         $container->setDefinition($clientId, $client);
 
         return $clientId;

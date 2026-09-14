@@ -26,6 +26,25 @@ final class GraphApiExceptionTest extends TestCase
         self::assertSame(100, $e->graphCode);
         self::assertSame(33, $e->subcode);
         self::assertSame('trace', $e->fbtraceId);
+        $info = $e->__debugInfo();
+        self::assertSame('[omitted]', $info['raw']);
+        self::assertSame('fail', $info['message']);
+    }
+
+    public function testRedactsTokensInMessageAndRaw(): void
+    {
+        $e = GraphApiException::fromGraph([
+            'error'        => ['message' => 'Invalid token EAAG12345678zzzz'],
+            'access_token' => 'should-not-leak',
+        ], 401);
+        self::assertSame('Invalid token [redacted]', $e->getMessage());
+        self::assertSame('[redacted]', $e->raw['access_token']);
+    }
+
+    public function testFactoryHelpers(): void
+    {
+        self::assertSame('WhatsApp Cloud API transport failure.', GraphApiException::transportFailure()->getMessage());
+        self::assertSame('WhatsApp media download URL is not allowed.', GraphApiException::mediaUrlRejected()->getMessage());
     }
 
     public function testFromGraphWithoutError(): void

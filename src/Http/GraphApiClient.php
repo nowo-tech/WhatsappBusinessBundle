@@ -17,10 +17,12 @@ use function defined;
 use function extension_loaded;
 use function is_array;
 use function ltrim;
+use function parse_url;
 use function rtrim;
 use function sprintf;
 
 use const CURLOPT_CONNECTTIMEOUT;
+use const PHP_URL_HOST;
 
 /**
  * Low-level Graph HTTP client. Does not log tokens or request bodies.
@@ -88,19 +90,28 @@ final readonly class GraphApiClient
 
     public function downloadRaw(string $url): string
     {
+        if (!MediaDownloadUrlPolicy::isAllowed($url, $this->profile->graphBaseUri)) {
+            $this->logger->warning('WhatsApp media download URL rejected.', [
+                'profile' => $this->profile->name,
+                'host'    => parse_url($url, PHP_URL_HOST),
+            ]);
+            throw GraphApiException::mediaUrlRejected();
+        }
+
         try {
             return $this->httpClient->request('GET', $url, [
-                'timeout'      => $this->profile->timeout,
-                'max_duration' => $this->profile->timeout,
-                'headers'      => [
+                'timeout'       => $this->profile->timeout,
+                'max_duration'  => $this->profile->timeout,
+                'max_redirects' => 0,
+                'headers'       => [
                     'Authorization' => 'Bearer ' . $this->profile->accessToken,
                 ],
             ])->getContent();
-        } catch (TransportExceptionInterface $exception) {
+        } catch (TransportExceptionInterface) {
             $this->logger->error('WhatsApp media download failed.', [
                 'profile' => $this->profile->name,
             ]);
-            throw GraphApiException::fromGraph(['error' => ['message' => $exception->getMessage()]], 0);
+            throw GraphApiException::transportFailure();
         }
     }
 
@@ -118,8 +129,9 @@ final readonly class GraphApiClient
             ltrim($path, '/'),
         );
 
-        $options['timeout']      = $this->profile->timeout;
-        $options['max_duration'] = $this->profile->timeout;
+        $options['timeout']       = $this->profile->timeout;
+        $options['max_duration']  = $this->profile->timeout;
+        $options['max_redirects'] = 0;
         if (extension_loaded('curl') && defined('CURLOPT_CONNECTTIMEOUT')) {
             $options['extra']['curl'][CURLOPT_CONNECTTIMEOUT] = (int) ceil($this->profile->connectTimeout);
         }
@@ -135,13 +147,13 @@ final readonly class GraphApiClient
             $response = $this->httpClient->request($method, $url, $options);
             $status   = $response->getStatusCode();
             $payload  = $response->toArray(false);
-        } catch (TransportExceptionInterface $exception) {
+        } catch (TransportExceptionInterface) {
             $this->logger->error('WhatsApp Cloud API transport failure.', [
                 'profile' => $this->profile->name,
                 'method'  => $method,
                 'path'    => $path,
             ]);
-            throw GraphApiException::fromGraph(['error' => ['message' => $exception->getMessage()]], 0);
+            throw GraphApiException::transportFailure();
         }
 
         if ($status >= 400 || isset($payload['error'])) {

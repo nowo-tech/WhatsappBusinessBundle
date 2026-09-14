@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\WhatsappBusinessBundle\Webhook;
 
+use Nowo\WhatsappBusinessBundle\Http\SecretRedactor;
+
 use function is_string;
 
 /**
@@ -37,5 +39,19 @@ final readonly class StatusUpdate
         $recipientId = isset($payload['recipient_id']) && is_string($payload['recipient_id']) ? $payload['recipient_id'] : null;
 
         return new self($id, $status, $timestamp, $recipientId, $payload);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'id'          => $this->id,
+            'status'      => $this->status,
+            'timestamp'   => $this->timestamp,
+            'recipientId' => $this->recipientId === null ? null : SecretRedactor::maskPhone($this->recipientId),
+            'raw'         => '[omitted]',
+        ];
     }
 }

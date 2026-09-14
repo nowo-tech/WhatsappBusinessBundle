@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\WhatsappBusinessBundle\Tests\Unit\Http;
 
+use Nowo\WhatsappBusinessBundle\Config\CloudApiProfile;
+use Nowo\WhatsappBusinessBundle\Config\TransportKind;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiClient;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiException;
 use Nowo\WhatsappBusinessBundle\Tests\Unit\Support\ProfileFactory;
@@ -43,6 +45,7 @@ final class GraphApiClientTest extends TestCase
         });
         $client = new GraphApiClient($http, ProfileFactory::cloud());
         $this->expectException(GraphApiException::class);
+        $this->expectExceptionMessage('WhatsApp Cloud API transport failure.');
         $client->get('x');
     }
 
@@ -68,7 +71,46 @@ final class GraphApiClientTest extends TestCase
         });
         $client = new GraphApiClient($http, ProfileFactory::cloud());
         $this->expectException(GraphApiException::class);
-        $client->downloadRaw('https://example.com/x');
+        $client->downloadRaw('https://graph.facebook.com/v21.0/file');
+    }
+
+    public function testDownloadRejectsOffAllowlistWithoutCallingHttp(): void
+    {
+        $http = new MockHttpClient(static function (): never {
+            self::fail('must not send the access token to a rejected URL');
+        });
+        $client = new GraphApiClient($http, ProfileFactory::cloud());
+        $this->expectException(GraphApiException::class);
+        $this->expectExceptionMessage('WhatsApp media download URL is not allowed.');
+        $client->downloadRaw('https://evil.example/steal');
+    }
+
+    public function testDownloadAllowsLookasideHost(): void
+    {
+        $http   = new MockHttpClient([new MockResponse('bin', ['http_code' => 200])]);
+        $client = new GraphApiClient($http, ProfileFactory::cloud());
+        self::assertSame('bin', $client->downloadRaw('https://lookaside.fbsbx.com/whatsapp_business/attachments/x'));
+    }
+
+    public function testDownloadAllowsConfiguredGraphHost(): void
+    {
+        $profile = new CloudApiProfile(
+            name: 'default',
+            phoneNumberId: '123456',
+            accessToken: 'token',
+            transport: TransportKind::Cloud,
+            whatsappBusinessAccountId: 'waba-1',
+            graphVersion: 'v21.0',
+            graphBaseUri: 'https://graph.internal.test',
+            timeout: 10.0,
+            connectTimeout: 5.0,
+            appSecret: 'app-secret',
+            webhookVerifyToken: 'verify-me',
+            allowUnsignedWebhooks: false,
+        );
+        $http   = new MockHttpClient([new MockResponse('proxy', ['http_code' => 200])]);
+        $client = new GraphApiClient($http, $profile);
+        self::assertSame('proxy', $client->downloadRaw('https://graph.internal.test/v21.0/file'));
     }
 
     public function testNonArrayHeadersAreReset(): void

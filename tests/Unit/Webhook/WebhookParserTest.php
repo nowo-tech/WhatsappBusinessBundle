@@ -63,4 +63,23 @@ final class WebhookParserTest extends TestCase
         $status = StatusUpdate::fromGraph([]);
         self::assertNull($status->recipientId);
     }
+
+    public function testDebugInfoOmitsBodiesAndMasksPhones(): void
+    {
+        $notification = (new WebhookParser())->parse(['object' => 'whatsapp_business_account']);
+        self::assertSame('[omitted]', $notification->__debugInfo()['raw']);
+
+        $bare = IncomingMessage::fromGraph([]);
+        self::assertNull($bare->__debugInfo()['text']);
+
+        $withText = IncomingMessage::fromGraph(['from' => '34611111111', 'text' => ['body' => 'secret-body']]);
+        self::assertSame('[omitted]', $withText->__debugInfo()['text']);
+        self::assertSame('*******1111', $withText->__debugInfo()['from']);
+
+        $status = StatusUpdate::fromGraph([]);
+        self::assertNull($status->__debugInfo()['recipientId']);
+
+        $withRecipient = StatusUpdate::fromGraph(['recipient_id' => '34611111111']);
+        self::assertSame('*******1111', $withRecipient->__debugInfo()['recipientId']);
+    }
 }

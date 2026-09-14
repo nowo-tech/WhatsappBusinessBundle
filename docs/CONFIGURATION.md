@@ -61,3 +61,5 @@ Keep PHP `max_execution_time` and reverse-proxy write timeouts **greater** than 
 - `…/whatsapp/webhook/{profile}` — same, for a named profile
 
 Production: set `app_secret` and `allow_unsigned_webhooks: false`.
+
+Media downloads (`downloadMedia`) only follow HTTPS URLs on Meta hosts (`*.facebook.com`, `*.fbsbx.com`, `*.fbcdn.net`, …) or the host of `graph_base_uri`. Query strings on dumped media URLs are redacted.

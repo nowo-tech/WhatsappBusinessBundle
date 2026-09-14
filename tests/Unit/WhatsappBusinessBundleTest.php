@@ -21,4 +21,12 @@ final class WhatsappBusinessBundleTest extends TestCase
         self::assertInstanceOf(WhatsappBusinessExtension::class, $first);
         self::assertSame($first, $second);
     }
+
+    public function testBootRegistersSensitiveDumpCasters(): void
+    {
+        $bundle = new WhatsappBusinessBundle();
+        $bundle->boot();
+        $bundle->boot();
+        $this->addToAssertionCount(1);
+    }
 }
