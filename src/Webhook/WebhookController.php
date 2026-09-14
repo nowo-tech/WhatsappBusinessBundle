@@ -43,10 +43,10 @@ final class WebhookController
     {
         try {
             $client = $this->registry->get($profile === '' ? null : $profile);
-        } catch (UnknownProfileException $exception) {
+        } catch (UnknownProfileException) {
             $this->logger->warning('WhatsApp webhook for unknown profile.', ['profile' => $profile]);
 
-            return new Response($exception->getMessage(), Response::HTTP_NOT_FOUND);
+            return new Response('Unknown WhatsApp Business profile.', Response::HTTP_NOT_FOUND);
         }
 
         $cloudProfile = $client->profile();
@@ -67,10 +67,10 @@ final class WebhookController
         $header  = $request->headers->get('X-Hub-Signature-256');
         try {
             $this->verifier->verifySignature($cloudProfile, $rawBody, $header);
-        } catch (WebhookVerificationException $exception) {
+        } catch (WebhookVerificationException) {
             $this->logger->warning('WhatsApp webhook signature rejected.', ['profile' => $cloudProfile->name]);
 
-            return new Response($exception->getMessage(), Response::HTTP_FORBIDDEN);
+            return new Response('Invalid WhatsApp webhook signature.', Response::HTTP_FORBIDDEN);
         }
 
         /** @var mixed $decoded */

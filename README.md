@@ -52,6 +52,7 @@ Looking for: **WhatsApp Business API**, **WhatsApp Cloud API**, **Symfony WhatsA
 - CLI: `whatsapp:send-text`, `whatsapp:templates`
 - Mock transport + `ResetInterface` so FrankenPHP workers do not leak recorded sends
 - Logs never include access tokens, app secrets, or full phone numbers (masked)
+- Dump/profiler redaction + media URL allowlist (anti-SSRF) for Cloud API downloads
 
 ## Installation
 

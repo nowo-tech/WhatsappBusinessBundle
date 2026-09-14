@@ -119,6 +119,7 @@
     "suggest": {
         "symfony/flex": "For automatic recipe installation",
         "symfony/messenger": "Queue outbound Cloud API calls with SendOutgoingMessage",
-        "symfony/console": "CLI helpers (whatsapp:send-text, whatsapp:templates)"
+        "symfony/console": "CLI helpers (whatsapp:send-text, whatsapp:templates)",
+        "symfony/var-dumper": "Registers dump/profiler casters so Cloud API secrets never appear in dumps"
     }
 }

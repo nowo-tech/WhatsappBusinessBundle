@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\WhatsappBusinessBundle\Message;
 
+use Nowo\WhatsappBusinessBundle\Http\SecretRedactor;
+
 use function is_array;
 use function is_string;
 
@@ -48,5 +50,22 @@ final readonly class MessageResult
         }
 
         return new self($messageId, $recipientIds, $payload);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        $masked = [];
+        foreach ($this->recipientIds as $id) {
+            $masked[] = SecretRedactor::maskPhone($id);
+        }
+
+        return [
+            'messageId'    => $this->messageId,
+            'recipientIds' => $masked,
+            'raw'          => '[omitted]',
+        ];
     }
 }

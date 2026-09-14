@@ -20,4 +20,15 @@ final readonly class MediaId
         public array $raw,
     ) {
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'id'  => $this->id,
+            'raw' => '[omitted]',
+        ];
+    }
 }

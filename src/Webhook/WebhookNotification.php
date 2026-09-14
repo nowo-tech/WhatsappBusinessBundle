@@ -24,4 +24,17 @@ final readonly class WebhookNotification
         public array $raw,
     ) {
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'object'   => $this->object,
+            'messages' => $this->messages,
+            'statuses' => $this->statuses,
+            'raw'      => '[omitted]',
+        ];
+    }
 }

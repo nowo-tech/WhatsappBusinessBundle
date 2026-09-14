@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\WhatsappBusinessBundle\Webhook;
 
+use Nowo\WhatsappBusinessBundle\Http\SecretRedactor;
+
 use function is_array;
 use function is_string;
 
@@ -43,5 +45,20 @@ final readonly class IncomingMessage
         }
 
         return new self($id, $from, $type, $text, $timestamp, $payload);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'id'        => $this->id,
+            'from'      => SecretRedactor::maskPhone($this->from),
+            'type'      => $this->type,
+            'text'      => $this->text === null ? null : '[omitted]',
+            'timestamp' => $this->timestamp,
+            'raw'       => '[omitted]',
+        ];
     }
 }

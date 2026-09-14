@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\WhatsappBusinessBundle;
 
 use Nowo\WhatsappBusinessBundle\DependencyInjection\WhatsappBusinessExtension;
+use Nowo\WhatsappBusinessBundle\Http\SensitiveDumpRegistrar;
 use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
@@ -16,6 +17,12 @@ use Symfony\Component\HttpKernel\Bundle\Bundle;
  */
 final class WhatsappBusinessBundle extends Bundle
 {
+    public function boot(): void
+    {
+        parent::boot();
+        SensitiveDumpRegistrar::register();
+    }
+
     public function getContainerExtension(): ExtensionInterface
     {
         if (!$this->extension instanceof WhatsappBusinessExtension) {

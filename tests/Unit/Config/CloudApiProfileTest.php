@@ -19,6 +19,17 @@ final class CloudApiProfileTest extends TestCase
         self::assertSame('123456/messages', $profile->messagesPath());
         self::assertSame('123456/media', $profile->mediaPath());
         self::assertSame('waba-1/message_templates', $profile->templatesPath());
+        $info = $profile->__debugInfo();
+        self::assertSame('[redacted]', $info['accessToken']);
+        self::assertSame('[redacted]', $info['appSecret']);
+        self::assertSame('[redacted]', $info['webhookVerifyToken']);
+    }
+
+    public function testDebugInfoKeepsNullSecrets(): void
+    {
+        $info = ProfileFactory::mock(appSecret: null, verifyToken: null)->__debugInfo();
+        self::assertNull($info['appSecret']);
+        self::assertNull($info['webhookVerifyToken']);
     }
 
     public function testTemplatesPathRequiresWaba(): void

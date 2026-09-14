@@ -36,7 +36,19 @@ final class MessageResultTest extends TestCase
     {
         $id = new MediaId('m1', ['id' => 'm1']);
         self::assertSame('m1', $id->id);
-        $download = new MediaDownload('bytes', 'image/jpeg', 'https://example.com/m');
+        $download = new MediaDownload('bytes', 'image/jpeg', 'https://example.com/m?oh=secret');
         self::assertSame('bytes', $download->contents);
+        $dump = $download->__debugInfo();
+        self::assertSame('[omitted]', $dump['contents']);
+        self::assertSame('https://example.com/m?[redacted]', $dump['url']);
+        self::assertSame('[omitted]', $id->__debugInfo()['raw']);
+        $resultDump = MessageResult::fromGraph([
+            'messages' => [['id' => 'wamid.1']],
+            'contacts' => [['wa_id' => '34611111111']],
+        ])->__debugInfo();
+        self::assertSame('*******1111', $resultDump['recipientIds'][0]);
+        self::assertSame('[omitted]', $resultDump['raw']);
+        $emptyDownload = new MediaDownload('x', null, null);
+        self::assertNull($emptyDownload->__debugInfo()['url']);
     }
 }

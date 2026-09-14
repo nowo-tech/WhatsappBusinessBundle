@@ -11,13 +11,18 @@ use function is_int;
 use function is_string;
 
 /**
- * Graph API error envelope.
+ * Graph API error envelope. Messages and dumped state never include access tokens.
  *
  * @author Héctor Franco Aceituno <hectorfranco@nowo.tech>
  * @copyright 2026 Nowo.tech
  */
 final class GraphApiException extends WhatsappBusinessException
 {
+    /**
+     * @var array<string, mixed>
+     */
+    public readonly array $raw;
+
     /**
      * @param array<string, mixed> $raw
      */
@@ -27,9 +32,10 @@ final class GraphApiException extends WhatsappBusinessException
         public readonly ?int $graphCode,
         public readonly ?int $subcode,
         public readonly ?string $fbtraceId,
-        public readonly array $raw,
+        array $raw,
     ) {
-        parent::__construct($message, $httpStatus);
+        $this->raw = SecretRedactor::redactArray($raw);
+        parent::__construct(SecretRedactor::redactString($message), $httpStatus);
     }
 
     /**
@@ -59,5 +65,30 @@ final class GraphApiException extends WhatsappBusinessException
         }
 
         return new self($message, $httpStatus, $code, $subcode, $fbtraceId, $payload);
+    }
+
+    public static function transportFailure(): self
+    {
+        return new self('WhatsApp Cloud API transport failure.', 0, null, null, null, []);
+    }
+
+    public static function mediaUrlRejected(): self
+    {
+        return new self('WhatsApp media download URL is not allowed.', 0, null, null, null, []);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'message'    => $this->getMessage(),
+            'httpStatus' => $this->httpStatus,
+            'graphCode'  => $this->graphCode,
+            'subcode'    => $this->subcode,
+            'fbtraceId'  => $this->fbtraceId,
+            'raw'        => '[omitted]',
+        ];
     }
 }

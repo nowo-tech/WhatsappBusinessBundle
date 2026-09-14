@@ -18,11 +18,12 @@ Also see [`.github/SECURITY.md`](../.github/SECURITY.md).
 
 | Risk | Mitigation |
 |------|------------|
-| Stolen Cloud API access token | Tokens only via env/`%env()%`; never logged; never committed |
-| Forged webhooks | HMAC `X-Hub-Signature-256` with `app_secret`; `allow_unsigned_webhooks` defaults false |
+| Stolen Cloud API access token | Tokens only via env/`%env()%`; never logged; never committed; redacted in dumps/profiler (`__debugInfo`, VarDumper casters, `SensitiveParameter`) |
+| Forged webhooks | HMAC `X-Hub-Signature-256` with `app_secret`; `allow_unsigned_webhooks` defaults false (including the zero-config mock profile) |
 | SSRF via Graph base URI | Config allows `https://` URLs only |
+| SSRF / token theft via media URL | Downloads only to Meta hosts or the configured `graph_base_uri` host; `max_redirects: 0`; no `userinfo` in URL |
 | Hung outbound HTTP under FrankenPHP worker | Profile `timeout` + `connect_timeout` (REQ-RUNTIME-001) |
-| PII in logs | Phone numbers masked; message bodies and tokens never logged |
+| PII in logs | Phone numbers masked; message bodies and tokens never logged or dumped |
 | Mock transport leaking across worker requests | `ResetInterface` / `kernel.reset` |
 
 ## Logging (REQ-OBS-001)
@@ -48,7 +49,7 @@ Security fixes are provided for the latest minor of the current major release li
 | Field | Value |
 | ----- | ----- |
 | Risk level | **Low** |
-| AI audit date | 2026-08-24 |
-| Method | Cursor agent static review of `src/`, DI config, webhook controller, transport, `docs/SECURITY.md`, `.github/SECURITY.md` |
+| AI audit date | 2026-09-14 |
+| Method | Cursor agent static review of `src/`, DI config, webhook controller, media download policy, dump redaction, transport, `docs/SECURITY.md`, `.github/SECURITY.md` |
 | Grade | **Pass (good)** |
 | Open residuals | Host must protect webhook routes and store tokens only in env/`%env()%`; no Critical/High findings. |
