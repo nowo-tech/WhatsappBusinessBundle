@@ -50,7 +50,7 @@ Looking for: **WhatsApp Business API**, **WhatsApp Cloud API**, **Symfony WhatsA
 - Events: `MessageSentEvent`, `MessageSendFailedEvent`, `WebhookReceivedEvent`, `IncomingMessageEvent`, `StatusUpdateEvent`
 - Optional Messenger message `SendOutgoingMessage` (failures bubble to the failure transport)
 - CLI: `whatsapp:send-text`, `whatsapp:templates`
-- Mock transport + `ResetInterface` so FrankenPHP workers do not leak recorded sends
+- Mock transport worker-safe without `kernel.reset` (`ResetInterface` + per-request clear + bounded `recorded()`)
 - Logs never include access tokens, app secrets, or full phone numbers (masked)
 - Dump/profiler redaction + media URL allowlist (anti-SSRF) for Cloud API downloads
 
@@ -136,6 +136,7 @@ Do not copy proprietary host code into this package. The public API is the integ
 
 - [Demo (Symfony 8)](demo/README.md) — run `make -C demo up-symfony8` from the bundle root.
 - [Demo with FrankenPHP (development and production)](docs/DEMO-FRANKENPHP.md)
+- [FrankenPHP worker mode audit](docs/FRANKENPHP-WORKER-AUDIT.md)
 - [GitHub Actions CI requirements](docs/GITHUB_CI.md)
 
 ## Tests and coverage

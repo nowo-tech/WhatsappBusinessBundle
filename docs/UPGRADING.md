@@ -1,5 +1,18 @@
 # Upgrading
 
+## From 1.1.0 to 1.1.1
+
+FrankenPHP worker hardening (safe under worker mode even when the kernel is not reset between requests). **No code changes required** for typical apps.
+
+```bash
+composer update nowo-tech/whatsapp-business-bundle
+```
+
+Behaviour change for profiles using `transport: mock` (including the zero-config default profile):
+
+- `MockTransport::recorded()` is cleared at the start of every main HTTP request (sub-requests keep it), not only by `kernel.reset`. Read it in the same request that sent the messages; do not rely on it to carry sends from one request to the next.
+- `recorded()` keeps only the most recent `MockTransport::DEFAULT_MAX_RECORDED` (100) entries. Code that builds `MockTransport` directly can pass a different limit as the second constructor argument.
+
 ## From 1.0.x to 1.1.0
 
 Security hardening release. Most apps need **no code changes** if they already use HMAC webhooks and inject `WhatsappClientInterface` / `nowo_whatsapp_business.client`.

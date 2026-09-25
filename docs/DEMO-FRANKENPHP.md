@@ -21,7 +21,7 @@ FRANKENPHP_MODE=worker
 
 | Value | Behaviour |
 |-------|-----------|
-| `worker` (default) | `php_server { worker ... }` — app stays in memory; mock transport resets via `ResetInterface` |
+| `worker` (default) | `php_server { worker ... }` — app stays in memory; mock transport clears per request (even without `kernel.reset`) |
 | `classic` | Classic `php_server` without worker |
 
 Switch mode by changing `.env` and recreating containers (`docker compose up -d`); no image rebuild required.
@@ -30,7 +30,7 @@ See `docker/entrypoint.sh` and `docker/frankenphp/Caddyfile` / `Caddyfile.dev`.
 
 ## Worker compatibility
 
-- `MockTransport` implements `ResetInterface` and is tagged `kernel.reset`.
+- `MockTransport` implements `ResetInterface` and is tagged `kernel.reset`; the bundle also clears it at the start of every main request and keeps at most `MockTransport::DEFAULT_MAX_RECORDED` (100) entries, so recorded sends never leak between requests even without the services resetter.
 - `WhatsappClient` / `GraphApiClient` / `CloudApiProfile` are readonly and store no per-request Graph bodies.
 - Webhook controller returns 200 after dispatching events (host listeners must stay fast or queue work).
 

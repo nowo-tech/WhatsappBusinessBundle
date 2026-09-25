@@ -9,7 +9,7 @@ Host Symfony applications need a reusable, worker-safe client for the public Wha
 - Named profiles (`default_profile` + `profiles`) with HTTP timeouts (REQ-RUNTIME-001).
 - Typed outbound messages plus `sendRaw()` for host-built Graph JSON.
 - HMAC webhook verification and events for inbound messages/statuses.
-- Mock transport for demos/tests; `ResetInterface` for FrankenPHP workers.
+- Mock transport for demos/tests; worker-safe under FrankenPHP even when the kernel is not reset (`ResetInterface` + per-request clear + bounded buffer).
 - No host-proprietary code, no Doctrine schema, no secrets in git.
 
 ## Non-goals
@@ -32,7 +32,7 @@ As a Symfony app, I accept Meta webhooks only when `X-Hub-Signature-256` validat
 - FR-001: Profiles use `default_profile` + `profiles` with HTTPS-only Graph base URIs.
 - FR-002: Outbound HTTP uses connect/request timeouts (REQ-RUNTIME-001).
 - FR-003: Webhook HMAC verification is required unless explicitly disabled for local demos.
-- FR-004: Mock transport resets between worker requests (`ResetInterface`).
+- FR-004: Mock transport does not leak recorded sends between worker requests (`ResetInterface` / `kernel.reset`, plus `ResetMockTransportsOnRequestSubscriber` on main `kernel.request`, and a bounded `recorded()` buffer).
 
 ## Public API
 

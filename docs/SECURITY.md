@@ -24,7 +24,7 @@ Also see [`.github/SECURITY.md`](../.github/SECURITY.md).
 | SSRF / token theft via media URL | Downloads only to Meta hosts or the configured `graph_base_uri` host; `max_redirects: 0`; no `userinfo` in URL |
 | Hung outbound HTTP under FrankenPHP worker | Profile `timeout` + `connect_timeout` (REQ-RUNTIME-001) |
 | PII in logs | Phone numbers masked; message bodies and tokens never logged or dumped |
-| Mock transport leaking across worker requests | `ResetInterface` / `kernel.reset` |
+| Mock transport leaking across worker requests | `ResetInterface` / `kernel.reset` + per-request clear + bounded `recorded()` (see [FRANKENPHP-WORKER-AUDIT.md](FRANKENPHP-WORKER-AUDIT.md)) |
 
 ## Logging (REQ-OBS-001)
 

@@ -10,13 +10,16 @@ use Nowo\WhatsappBusinessBundle\Client\WhatsappClientRegistry;
 use Nowo\WhatsappBusinessBundle\Client\WhatsappClientRegistryInterface;
 use Nowo\WhatsappBusinessBundle\Config\CloudApiProfile;
 use Nowo\WhatsappBusinessBundle\Config\TransportKind;
+use Nowo\WhatsappBusinessBundle\EventSubscriber\ResetMockTransportsOnRequestSubscriber;
 use Nowo\WhatsappBusinessBundle\Exception\UnknownProfileException;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiClient;
 use Nowo\WhatsappBusinessBundle\Transport\CloudApiTransport;
 use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
@@ -61,6 +64,22 @@ final class WhatsappBusinessExtension extends Extension
         $clientRefs = [];
         foreach ($config['profiles'] as $name => $profileConfig) {
             $clientRefs[(string) $name] = new Reference($this->registerProfile($container, (string) $name, $profileConfig));
+        }
+
+        $mockTransports = [];
+        foreach ($config['profiles'] as $name => $profileConfig) {
+            if (TransportKind::from((string) $profileConfig['transport']) === TransportKind::Mock) {
+                // Only already-instantiated transports are reset (same strategy as services_resetter).
+                $mockTransports[] = new Reference(
+                    sprintf('nowo_whatsapp_business.transport.%s', $name),
+                    ContainerInterface::IGNORE_ON_UNINITIALIZED_REFERENCE,
+                );
+            }
+        }
+        if ($mockTransports !== []) {
+            $container->register(ResetMockTransportsOnRequestSubscriber::class, ResetMockTransportsOnRequestSubscriber::class)
+                ->setArgument('$transports', new IteratorArgument($mockTransports))
+                ->addTag('kernel.event_subscriber');
         }
 
         $registry = new Definition(WhatsappClientRegistry::class, [

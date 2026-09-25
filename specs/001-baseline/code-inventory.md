@@ -1,6 +1,6 @@
 # Code inventory (baseline)
 
-**Last audited:** 2026-08-24. **Coverage summary:** PHP 100% statements in root `coverage.xml` (see `make test-coverage`).
+**Last audited:** 2026-09-25. **Coverage summary:** PHP 100% statements in root `coverage.xml` (see `make test-coverage`).
 
 Categorized `src/` map for WhatsappBusinessBundle. Update when adding types.
 
@@ -30,9 +30,16 @@ Categorized `src/` map for WhatsappBusinessBundle. Update when adding types.
 
 - `Http/GraphApiClient.php`
 - `Http/GraphApiException.php`
+- `Http/MediaDownloadUrlPolicy.php`
+- `Http/SecretRedactor.php`
+- `Http/SensitiveDumpRegistrar.php`
 - `Transport/TransportInterface.php`
 - `Transport/CloudApiTransport.php`
 - `Transport/MockTransport.php`
+
+## Event subscribers
+
+- `EventSubscriber/ResetMockTransportsOnRequestSubscriber.php`
 
 ## Messages
 
