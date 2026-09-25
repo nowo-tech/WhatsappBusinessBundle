@@ -30,3 +30,4 @@
 *.tgz
 *.rar
 *.7z
+/config/reference.php

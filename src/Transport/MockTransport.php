@@ -12,37 +12,51 @@ use Nowo\WhatsappBusinessBundle\Template\MessageTemplate;
 use Nowo\WhatsappBusinessBundle\Template\TemplateStatus;
 use Symfony\Contracts\Service\ResetInterface;
 
+use function array_slice;
 use function bin2hex;
+use function count;
 use function is_string;
+use function max;
 use function random_bytes;
 
 /**
  * In-memory transport for demos, tests, and hosts without Cloud credentials.
  *
- * Implements ResetInterface so FrankenPHP worker mode does not leak recorded sends.
+ * Recorded sends are bounded ({@see self::DEFAULT_MAX_RECORDED}) and cleared by {@see reset()}, which the
+ * bundle calls at the start of every main request and on {@code kernel.reset}, so FrankenPHP workers never
+ * expose (or accumulate) sends from earlier requests.
  *
  * @author Héctor Franco Aceituno <hectorfranco@nowo.tech>
  * @copyright 2026 Nowo.tech
  */
 final class MockTransport implements TransportInterface, ResetInterface
 {
+    public const DEFAULT_MAX_RECORDED = 100;
+
     /** @var list<array<string, mixed>> */
     private array $sent = [];
 
+    private readonly int $maxRecorded;
+
+    /**
+     * @param int $maxRecorded only the most recent entries are kept (minimum 1)
+     */
     public function __construct(
         private readonly CloudApiProfile $profile,
+        int $maxRecorded = self::DEFAULT_MAX_RECORDED,
     ) {
+        $this->maxRecorded = max(1, $maxRecorded);
     }
 
     public function send(array $graphBody): array
     {
-        $id           = 'mock.' . bin2hex(random_bytes(8));
-        $to           = isset($graphBody['to']) && is_string($graphBody['to']) ? $graphBody['to'] : '';
-        $this->sent[] = [
+        $id = 'mock.' . bin2hex(random_bytes(8));
+        $to = isset($graphBody['to']) && is_string($graphBody['to']) ? $graphBody['to'] : '';
+        $this->record([
             'to'   => $to,
             'body' => $graphBody,
             'id'   => $id,
-        ];
+        ]);
 
         return [
             'messaging_product' => 'whatsapp',
@@ -53,7 +67,7 @@ final class MockTransport implements TransportInterface, ResetInterface
 
     public function markAsRead(string $messageId): void
     {
-        $this->sent[] = ['read' => $messageId];
+        $this->record(['read' => $messageId]);
     }
 
     public function uploadMedia(string $filePath, string $mimeType): MediaId
@@ -97,5 +111,16 @@ final class MockTransport implements TransportInterface, ResetInterface
     public function reset(): void
     {
         $this->sent = [];
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     */
+    private function record(array $entry): void
+    {
+        $this->sent[] = $entry;
+        if (count($this->sent) > $this->maxRecorded) {
+            $this->sent = array_slice($this->sent, -$this->maxRecorded);
+        }
     }
 }

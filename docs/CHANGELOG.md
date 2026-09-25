@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-25
+
+### Fixed
+
+- FrankenPHP worker mode without `kernel.reset`: sends recorded by `MockTransport` (the default transport when no profile is configured) no longer leak into later requests or grow for the life of the worker. A new `ResetMockTransportsOnRequestSubscriber` clears already-instantiated mock transports at the start of every main request, and `MockTransport` keeps at most `DEFAULT_MAX_RECORDED` (100) entries (optional `$maxRecorded` constructor argument).
+
+### Notes
+
+- See [UPGRADING.md](UPGRADING.md) and [FRANKENPHP-WORKER-AUDIT.md](FRANKENPHP-WORKER-AUDIT.md).
+
+[1.1.1]: https://github.com/nowo-tech/WhatsappBusinessBundle/releases/tag/v1.1.1
+
 ## [1.1.0] - 2026-09-14
 
 ### Security
