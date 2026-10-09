@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-10-09
+
+### Changed
+
+- Dev dependencies (lock refresh): PHPStan 2.3.1 (+ phpunit/symfony extensions 2.1), PHPUnit 11.5.57, Rector 2.7.0, `nowo-tech/phpstan-frankenphp` 1.2.3.
+- Demo (Symfony 8): Twig 3.30.0, `twig/extra-bundle` 3.29.0, HotReloadBundle 1.5.5, TwigInspectorBundle 1.1.7.
+
+[1.1.3]: https://github.com/nowo-tech/WhatsappBusinessBundle/releases/tag/v1.1.3
+
 ## [1.1.2] - 2026-09-27
 
 ### Added

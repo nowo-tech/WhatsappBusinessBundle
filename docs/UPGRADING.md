@@ -3,6 +3,14 @@
 
 ## Unreleased
 
+## To 1.1.3
+
+From **1.1.2** — dependency refresh only. No breaking changes. No application upgrade steps.
+
+```bash
+composer update nowo-tech/whatsapp-business-bundle
+```
+
 ## To 1.1.2
 
 From **1.1.1** — REQ-CS-008 Igor FrankenPHP worker audit (igor-php require-dev, igor.json, make igor).
