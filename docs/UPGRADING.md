@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## To 1.2.1
+
+From **1.2.0** — symfony/yaml required at runtime.
+
+```bash
+composer update nowo-tech/whatsapp-business-bundle
+```
+
+- No application upgrade steps (`symfony/yaml` is now a declared runtime dependency).
+
 ## To 1.2.0
 
 From **1.1.4** — security - media ids validated, Graph decoding/download errors mapped to GraphApiException.
