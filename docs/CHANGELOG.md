@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-13
+
 ### Security
 
 - `downloadMedia()` (Cloud API transport) rejects media ids that do not match `^[0-9A-Za-z_-]+$` with `InvalidMediaIdException`, so a crafted id can no longer address another Graph path (e.g. `../PHONE_ID/messages`) with the profile access token.
@@ -15,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Non-JSON Graph responses (e.g. an HTML 502 page from a proxy) now throw `GraphApiException` (with the HTTP status) instead of leaking a `DecodingException`; `send()` therefore dispatches `MessageSendFailedEvent` for them too.
 - Media downloads answering 3xx/4xx/5xx now throw `GraphApiException` (`httpStatus` set) instead of a raw HttpClient exception.
+
+[1.2.0]: https://github.com/nowo-tech/WhatsappBusinessBundle/releases/tag/v1.2.0
 
 ## [1.1.4] - 2026-10-13
 
