@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## To 1.2.0
+
+From **1.1.4** — security - media ids validated, Graph decoding/download errors mapped to GraphApiException.
+
+```bash
+composer update nowo-tech/whatsapp-business-bundle
+```
+
+- `downloadMedia()` with a non-node id now throws `InvalidMediaIdException`.
+- HTTP and JSON decoding errors from the Graph API now surface as `GraphApiException` (and `MessageSendFailedEvent` fires).
+
 ## To 1.1.4
 
 From **1.1.3** — dependency refresh and repository maintenance.
