@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- CI: the per-Symfony install step no longer re-requires `symfony/yaml` with `--dev` (it is a runtime dependency since 1.2.1 and was moved to `require-dev` in every matrix cell). The matrix already covers the `^6.4` floor (6.4, 7.0, 7.4, 8.0, 8.1).
+
 ## [1.2.1] - 2026-10-13
 
 ### Changed
