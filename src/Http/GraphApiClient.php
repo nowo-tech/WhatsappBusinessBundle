@@ -9,6 +9,8 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
+use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -99,14 +101,23 @@ final readonly class GraphApiClient
         }
 
         try {
-            return $this->httpClient->request('GET', $url, [
+            $response = $this->httpClient->request('GET', $url, [
                 'timeout'       => $this->profile->timeout,
                 'max_duration'  => $this->profile->timeout,
                 'max_redirects' => 0,
                 'headers'       => [
                     'Authorization' => 'Bearer ' . $this->profile->accessToken,
                 ],
-            ])->getContent();
+            ]);
+
+            return $response->getContent();
+        } catch (HttpExceptionInterface $exception) {
+            $status = $exception->getResponse()->getStatusCode();
+            $this->logger->error('WhatsApp media download failed.', [
+                'profile' => $this->profile->name,
+                'status'  => $status,
+            ]);
+            throw GraphApiException::mediaDownloadFailed($status);
         } catch (TransportExceptionInterface) {
             $this->logger->error('WhatsApp media download failed.', [
                 'profile' => $this->profile->name,
@@ -143,10 +154,18 @@ final readonly class GraphApiClient
         $headers['Accept']        = $headers['Accept'] ?? 'application/json';
         $options['headers']       = $headers;
 
+        $status = 0;
         try {
             $response = $this->httpClient->request($method, $url, $options);
             $status   = $response->getStatusCode();
             $payload  = $response->toArray(false);
+        } catch (DecodingExceptionInterface) {
+            $this->logger->warning('WhatsApp Cloud API returned a non-JSON response.', [
+                'profile' => $this->profile->name,
+                'status'  => $status,
+                'path'    => $path,
+            ]);
+            throw GraphApiException::invalidResponse($status);
         } catch (TransportExceptionInterface) {
             $this->logger->error('WhatsApp Cloud API transport failure.', [
                 'profile' => $this->profile->name,

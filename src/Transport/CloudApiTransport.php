@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\WhatsappBusinessBundle\Transport;
 
 use Nowo\WhatsappBusinessBundle\Config\CloudApiProfile;
+use Nowo\WhatsappBusinessBundle\Exception\InvalidMediaIdException;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiClient;
 use Nowo\WhatsappBusinessBundle\Message\MediaDownload;
 use Nowo\WhatsappBusinessBundle\Message\MediaId;
@@ -12,6 +13,7 @@ use Nowo\WhatsappBusinessBundle\Template\MessageTemplate;
 
 use function is_array;
 use function is_string;
+use function preg_match;
 
 /**
  * Live WhatsApp Cloud API (Graph) transport.
@@ -51,6 +53,11 @@ final readonly class CloudApiTransport implements TransportInterface
 
     public function downloadMedia(string $mediaId): MediaDownload
     {
+        // The id becomes a Graph URL path segment: reject "/", "?", "..", "%2F", etc.
+        if (preg_match('/^[0-9A-Za-z_-]+$/', $mediaId) !== 1) {
+            throw InvalidMediaIdException::invalid();
+        }
+
         $meta = $this->graph->get($mediaId);
         $url  = isset($meta['url']) && is_string($meta['url']) ? $meta['url'] : null;
         $mime = isset($meta['mime_type']) && is_string($meta['mime_type']) ? $meta['mime_type'] : null;

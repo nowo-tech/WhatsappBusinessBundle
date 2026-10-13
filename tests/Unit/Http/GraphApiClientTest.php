@@ -19,6 +19,7 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 #[CoversClass(GraphApiClient::class)]
+#[CoversClass(GraphApiException::class)]
 final class GraphApiClientTest extends TestCase
 {
     public function testPostGetDeleteAndError(): void
@@ -72,6 +73,34 @@ final class GraphApiClientTest extends TestCase
         $client = new GraphApiClient($http, ProfileFactory::cloud());
         $this->expectException(GraphApiException::class);
         $client->downloadRaw('https://graph.facebook.com/v21.0/file');
+    }
+
+    public function testNonJsonResponseIsMappedToGraphApiException(): void
+    {
+        foreach ([[200, 'not json'], [502, '<html>Bad Gateway</html>']] as [$code, $body]) {
+            $client = new GraphApiClient(new MockHttpClient([new MockResponse($body, ['http_code' => $code])]), ProfileFactory::cloud());
+            try {
+                $client->postJson('123456/messages', []);
+                self::fail('GraphApiException expected');
+            } catch (GraphApiException $exception) {
+                self::assertSame($code, $exception->httpStatus);
+                self::assertSame('WhatsApp Cloud API returned a non-JSON response.', $exception->getMessage());
+            }
+        }
+    }
+
+    public function testDownloadHttpErrorIsMappedToGraphApiException(): void
+    {
+        foreach ([301, 404, 500] as $code) {
+            $client = new GraphApiClient(new MockHttpClient([new MockResponse('err', ['http_code' => $code])]), ProfileFactory::cloud());
+            try {
+                $client->downloadRaw('https://graph.facebook.com/v21.0/file');
+                self::fail('GraphApiException expected');
+            } catch (GraphApiException $exception) {
+                self::assertSame($code, $exception->httpStatus);
+                self::assertSame('WhatsApp media download failed.', $exception->getMessage());
+            }
+        }
     }
 
     public function testDownloadRejectsOffAllowlistWithoutCallingHttp(): void
