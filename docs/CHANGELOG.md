@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `symfony/yaml` moved from `require-dev` to `require`: the extension loads `services.yaml` with `YamlFileLoader`, so apps without `symfony/yaml` failed at container build.
+
 ## [1.2.0] - 2026-10-13
 
 ### Security
