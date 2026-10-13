@@ -54,7 +54,8 @@ final readonly class CloudApiTransport implements TransportInterface
     public function downloadMedia(string $mediaId): MediaDownload
     {
         // The id becomes a Graph URL path segment: reject "/", "?", "..", "%2F", etc.
-        if (preg_match('/^[0-9A-Za-z_-]+$/', $mediaId) !== 1) {
+        // "D" (dollar end only): without it "$" also matches before a trailing "\n".
+        if (preg_match('/^[0-9A-Za-z_-]+$/D', $mediaId) !== 1) {
             throw InvalidMediaIdException::invalid();
         }
 

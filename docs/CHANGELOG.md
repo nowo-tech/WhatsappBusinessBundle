@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- `downloadMedia()` media id check now anchors at the true end of the string (PCRE `D` modifier): `"123\n"` was still accepted by `^[0-9A-Za-z_-]+$` and reached the Graph URL. `docs/SECURITY.md` threat model lists the media id validation.
+
 ### Changed
 
 - CI: the per-Symfony install step no longer re-requires `symfony/yaml` with `--dev` (it is a runtime dependency since 1.2.1 and was moved to `require-dev` in every matrix cell). The matrix already covers the `^6.4` floor (6.4, 7.0, 7.4, 8.0, 8.1).
