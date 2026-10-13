@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-10-13
+
+### Dependencies
+
+- `igor-php/igor-php` 0.9.7 → 0.10.1 (require-dev constraint + development lock; #11).
+
+[1.1.4]: https://github.com/nowo-tech/WhatsappBusinessBundle/releases/tag/v1.1.4
+
 ## [1.1.3] - 2026-10-09
 
 ### Changed
