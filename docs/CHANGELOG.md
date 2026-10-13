@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Table of contents
+
+- [[Unreleased]](#unreleased)
+- [[1.2.1] - 2026-10-13](#121---2026-10-13)
+- [[1.2.0] - 2026-10-13](#120---2026-10-13)
+- [[1.1.4] - 2026-10-13](#114---2026-10-13)
+- [[1.1.3] - 2026-10-09](#113---2026-10-09)
+- [[1.1.2] - 2026-09-27](#112---2026-09-27)
+- [[1.1.1] - 2026-09-25](#111---2026-09-25)
+- [[1.1.0] - 2026-09-14](#110---2026-09-14)
+- [[1.0.1] - 2026-09-07](#101---2026-09-07)
+- [[1.0.0] - 2026-08-24](#100---2026-08-24)
+
 ## [Unreleased]
 
 ### Changed
