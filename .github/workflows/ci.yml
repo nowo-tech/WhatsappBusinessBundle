@@ -86,10 +86,12 @@ jobs:
             symfony/http-kernel:^${{ matrix.symfony }} \
             symfony/mime:^${{ matrix.symfony }} \
             symfony/routing:^${{ matrix.symfony }} \
-            --dev symfony/framework-bundle:^${{ matrix.symfony }} \
-            --dev symfony/console:^${{ matrix.symfony }} \
-            --dev symfony/messenger:^${{ matrix.symfony }} \
-            --dev symfony/yaml:^${{ matrix.symfony }} \
+            symfony/yaml:^${{ matrix.symfony }} \
+            --no-interaction --no-update
+          composer require --dev \
+            symfony/framework-bundle:^${{ matrix.symfony }} \
+            symfony/console:^${{ matrix.symfony }} \
+            symfony/messenger:^${{ matrix.symfony }} \
             --no-interaction --no-update
           composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress
 
