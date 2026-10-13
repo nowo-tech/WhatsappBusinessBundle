@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.2.2](#to-122)
 - [To 1.2.1](#to-121)
 - [To 1.2.0](#to-120)
 - [To 1.1.4](#to-114)
@@ -15,6 +16,16 @@
 - [1.0.0](#100)
 
 ## Unreleased
+
+## To 1.2.2
+
+From **1.2.1** — security - media id check anchored at end of string.
+
+```bash
+composer update nowo-tech/whatsapp-business-bundle
+```
+
+- No breaking changes. No application upgrade steps.
 
 ## To 1.2.1
 
