@@ -72,6 +72,22 @@ final class GraphApiException extends WhatsappBusinessException
         return new self('WhatsApp Cloud API transport failure.', 0, null, null, null, []);
     }
 
+    /**
+     * The Graph response body is not valid JSON (e.g. an HTML error page from a proxy).
+     */
+    public static function invalidResponse(int $httpStatus): self
+    {
+        return new self('WhatsApp Cloud API returned a non-JSON response.', $httpStatus, null, null, null, []);
+    }
+
+    /**
+     * Media download answered with a 3xx/4xx/5xx status.
+     */
+    public static function mediaDownloadFailed(int $httpStatus): self
+    {
+        return new self('WhatsApp media download failed.', $httpStatus, null, null, null, []);
+    }
+
     public static function mediaUrlRejected(): self
     {
         return new self('WhatsApp media download URL is not allowed.', 0, null, null, null, []);

@@ -4,18 +4,21 @@ declare(strict_types=1);
 
 namespace Nowo\WhatsappBusinessBundle\Tests\Unit\Transport;
 
+use Nowo\WhatsappBusinessBundle\Exception\InvalidMediaIdException;
 use Nowo\WhatsappBusinessBundle\Exception\MissingBusinessAccountException;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiClient;
 use Nowo\WhatsappBusinessBundle\Tests\Unit\Support\ProfileFactory;
 use Nowo\WhatsappBusinessBundle\Transport\CloudApiTransport;
 use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 #[CoversClass(MockTransport::class)]
 #[CoversClass(CloudApiTransport::class)]
+#[CoversClass(InvalidMediaIdException::class)]
 final class TransportTest extends TestCase
 {
     public function testMockTransportRecordsAndResets(): void
@@ -75,5 +78,42 @@ final class TransportTest extends TestCase
         $download  = $transport->downloadMedia('MID');
         self::assertSame('', $download->contents);
         self::assertNull($download->url);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function invalidMediaIdProvider(): iterable
+    {
+        yield 'path traversal' => ['../123456/messages'];
+        yield 'slash' => ['123/phone_numbers'];
+        yield 'query' => ['MID?fields=access_token'];
+        yield 'encoded slash' => ['MID%2F..'];
+        yield 'empty' => [''];
+        yield 'whitespace' => ['MID 1'];
+    }
+
+    #[DataProvider('invalidMediaIdProvider')]
+    public function testDownloadMediaRejectsIdsThatAreNotAGraphNode(string $mediaId): void
+    {
+        $http = new MockHttpClient(static function (): never {
+            self::fail('Graph must not be called with an invalid media id');
+        });
+        $transport = new CloudApiTransport(new GraphApiClient($http, ProfileFactory::cloud()), ProfileFactory::cloud());
+
+        $this->expectException(InvalidMediaIdException::class);
+        $transport->downloadMedia($mediaId);
+    }
+
+    public function testDownloadMediaAcceptsNumericAndTokenIds(): void
+    {
+        $http = new MockHttpClient([
+            new MockResponse('{"id":"1234567890"}', ['http_code' => 200]),
+            new MockResponse('{"id":"Ab_c-9"}', ['http_code' => 200]),
+        ]);
+        $transport = new CloudApiTransport(new GraphApiClient($http, ProfileFactory::cloud()), ProfileFactory::cloud());
+
+        self::assertSame('', $transport->downloadMedia('1234567890')->contents);
+        self::assertSame('', $transport->downloadMedia('Ab_c-9')->contents);
     }
 }
