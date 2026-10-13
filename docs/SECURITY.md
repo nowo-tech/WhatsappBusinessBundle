@@ -21,6 +21,7 @@ Also see [`.github/SECURITY.md`](../.github/SECURITY.md).
 | Stolen Cloud API access token | Tokens only via env/`%env()%`; never logged; never committed; redacted in dumps/profiler (`__debugInfo`, VarDumper casters, `SensitiveParameter`) |
 | Forged webhooks | HMAC `X-Hub-Signature-256` with `app_secret`; `allow_unsigned_webhooks` defaults false (including the zero-config mock profile) |
 | SSRF via Graph base URI | Config allows `https://` URLs only |
+| Graph path injection via media id | `downloadMedia()` (Cloud API transport) only accepts ids matching `^[0-9A-Za-z_-]+$` (no `/`, `?`, `..`, `%`, whitespace or trailing newline); otherwise `InvalidMediaIdException` before any Graph call (since 1.2.0) |
 | SSRF / token theft via media URL | Downloads only to Meta hosts or the configured `graph_base_uri` host; `max_redirects: 0`; no `userinfo` in URL |
 | Hung outbound HTTP under FrankenPHP worker | Profile `timeout` + `connect_timeout` (REQ-RUNTIME-001) |
 | PII in logs | Phone numbers masked; message bodies and tokens never logged or dumped |

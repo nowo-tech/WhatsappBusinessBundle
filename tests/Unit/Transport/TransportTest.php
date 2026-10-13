@@ -91,6 +91,7 @@ final class TransportTest extends TestCase
         yield 'encoded slash' => ['MID%2F..'];
         yield 'empty' => [''];
         yield 'whitespace' => ['MID 1'];
+        yield 'trailing newline' => ["123456\n"];
     }
 
     #[DataProvider('invalidMediaIdProvider')]
