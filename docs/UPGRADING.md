@@ -1,5 +1,19 @@
 # Upgrading
 
+## Table of contents
+
+- [Unreleased](#unreleased)
+- [To 1.2.1](#to-121)
+- [To 1.2.0](#to-120)
+- [To 1.1.4](#to-114)
+- [To 1.1.3](#to-113)
+- [To 1.1.2](#to-112)
+- [From 1.1.0 to 1.1.1](#from-110-to-111)
+- [From 1.0.x to 1.1.0](#from-10x-to-110)
+  - [Behaviour changes to review](#behaviour-changes-to-review)
+- [From 1.0.0 to 1.0.1](#from-100-to-101)
+- [1.0.0](#100)
+
 ## Unreleased
 
 ## To 1.2.1
