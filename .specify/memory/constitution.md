@@ -1,4 +1,4 @@
-# GoogleTranslatePhpBundle Constitution
+# WhatsappBusinessBundle Constitution
 
 ## Core Principles
 
