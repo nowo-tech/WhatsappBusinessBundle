@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Documentation: wave-1 REQ compliance — README documentation list order and GitHub stars badge, canonical issue templates (`---feature-request.md`), GitHub CI requirements doc from the shared template, CONTRIBUTING Cursor Agent settings, TOCs, DEMO-FRANKENPHP dev/prod start and troubleshooting, Engram ↔ spec-driven cross-reference, spec-driven development rewrite, full GitHub Spec Kit manual, constitution title, baseline spec (US-*, grouped FR-*, SC-*, validation) and categorized inventory (60/60).
+
 ## [1.2.2] - 2026-10-13
 
 ### Security

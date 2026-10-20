@@ -9,6 +9,18 @@
 | Remediation (2026-09-23) | W-01 resolved (mock transport cleared per main request + bounded); W-02 and W-03 accepted |
 | **Verdict** | ✅ **100% viable under scenario B** (`reset_kernel` / services resetter off) — Cloud API profiles are stateless; mock profiles are cleared at the start of every main request and bounded, so they no longer depend on `kernel.reset` |
 
+## Table of contents
+
+- [Execution model assumed](#execution-model-assumed)
+- [Summary](#summary)
+- [Services reviewed](#services-reviewed)
+- [Findings](#findings)
+  - [W-01 — `MockTransport` keeps every recorded send; only `kernel.reset` clears it (Medium)](#w-01--mocktransport-keeps-every-recorded-send-only-kernelreset-clears-it-medium)
+  - [W-02 — VarDumper casters are registered in a process-global static map at boot (Info)](#w-02--vardumper-casters-are-registered-in-a-process-global-static-map-at-boot-info)
+  - [W-03 — Media downloads are loaded fully into memory (Info)](#w-03--media-downloads-are-loaded-fully-into-memory-info)
+- [Usage recommendations in worker mode](#usage-recommendations-in-worker-mode)
+- [Re-audit triggers](#re-audit-triggers)
+
 ## Execution model assumed
 
 FrankenPHP worker mode boots the Symfony kernel once per worker and serves many requests with the same container. This audit assumes the **strict** variant: the kernel is **not** rebooted between requests, so every shared service, static property and PHP global survives from one request to the next. Two scenarios are evaluated:

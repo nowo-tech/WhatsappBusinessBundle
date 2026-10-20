@@ -7,6 +7,7 @@
 - [Logging (REQ-OBS-001)](#logging-req-obs-001)
 - [Supported versions](#supported-versions)
 - [Release security checklist (12.4.1)](#release-security-checklist-1241)
+- [AI security audit (REQ-SEC-004)](#ai-security-audit-req-sec-004)
 
 ## Reporting a vulnerability
 
