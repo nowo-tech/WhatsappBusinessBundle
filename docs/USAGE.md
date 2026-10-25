@@ -9,6 +9,7 @@
 - [Events](#events)
 - [Messenger](#messenger)
 - [CLI](#cli)
+- [Forms in host apps and demos (REQ-TWIG-005)](#forms-in-host-apps-and-demos-req-twig-005)
 
 ## Send a text
 
@@ -73,3 +74,20 @@ Dispatch `Nowo\WhatsappBusinessBundle\Messenger\SendOutgoingMessage`. The handle
 php bin/console whatsapp:send-text 34611111111 "Hello" --profile=default
 php bin/console whatsapp:templates --profile=default
 ```
+
+## Forms in host apps and demos (REQ-TWIG-005)
+
+The bundle ships no page templates of its own; host apps call its services from their own controllers and forms. Every form in host apps and in the demo is a PHP Form Type created in the controller and rendered only with the Twig form helpers and the rendered-aware child loop (REQ-TWIG-003):
+
+```twig
+{{ form_start(form) }}
+    {% for child in form %}
+        {% if not child.rendered %}
+            {{ form_row(child) }}
+        {% endif %}
+    {% endfor %}
+    <button type="submit">Submit</button>
+{{ form_end(form) }}
+```
+
+Hosts and demos must not reintroduce raw `<form>` / `<input>` / `<textarea>` / `<select>` markup; `make check-no-raw-html-form` (part of `make release-check`) fails when bundle or demo Twig contains them.
