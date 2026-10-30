@@ -56,11 +56,45 @@ final class WebhookControllerTest extends TestCase
         self::assertSame(403, ($this->controller())($request)->getStatusCode());
     }
 
-    public function testUnknownProfile(): void
+    public function testUnknownProfileAnswersLikeABadTokenOrSignature(): void
     {
-        $response = ($this->controller())(Request::create('/whatsapp/webhook/nope', 'GET'), 'nope');
-        self::assertSame(404, $response->getStatusCode());
-        self::assertSame('Unknown WhatsApp Business profile.', $response->getContent());
+        $get = ($this->controller())(Request::create('/whatsapp/webhook/nope', 'GET'), 'nope');
+        self::assertSame(403, $get->getStatusCode());
+        self::assertSame('Invalid webhook verify token.', $get->getContent());
+
+        $post = ($this->controller())(Request::create('/whatsapp/webhook/nope', 'POST', [], [], [], [], '{}'), 'nope');
+        self::assertSame(403, $post->getStatusCode());
+        self::assertSame('Invalid WhatsApp webhook signature.', $post->getContent());
+    }
+
+    public function testPayloadForAnotherPhoneNumberIdIsRejected(): void
+    {
+        $body    = '{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"metadata":{"phone_number_id":"999999"},"messages":[{"id":"1","from":"34611","type":"text","timestamp":"1","text":{"body":"hi"}}]}}]}]}';
+        $request = Request::create('/whatsapp/webhook', 'POST', [], [], [], [
+            'HTTP_X_HUB_SIGNATURE_256' => 'sha256=' . hash_hmac('sha256', $body, 'app-secret'),
+        ], $body);
+        $dispatcher = new EventDispatcher();
+        $seen       = 0;
+        $dispatcher->addListener(IncomingMessageEvent::class, static function () use (&$seen): void {
+            ++$seen;
+        });
+        $profile    = ProfileFactory::mock();
+        $client     = new WhatsappClient($profile, new MockTransport($profile));
+        $controller = new WebhookController(new WhatsappClientRegistry(['default' => $client], 'default'), new WebhookVerifier(), new WebhookParser(), $dispatcher);
+
+        $response = $controller($request);
+        self::assertSame(403, $response->getStatusCode());
+        self::assertSame('WhatsApp webhook payload does not belong to this profile.', $response->getContent());
+        self::assertSame(0, $seen);
+    }
+
+    public function testPayloadForThisPhoneNumberIdIsAccepted(): void
+    {
+        $body    = '{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"metadata":{"phone_number_id":"123456"},"messages":[{"id":"1","from":"34611","type":"text","timestamp":"1","text":{"body":"hi"}}]}}]}]}';
+        $request = Request::create('/whatsapp/webhook', 'POST', [], [], [], [
+            'HTTP_X_HUB_SIGNATURE_256' => 'sha256=' . hash_hmac('sha256', $body, 'app-secret'),
+        ], $body);
+        self::assertSame(200, ($this->controller())($request)->getStatusCode());
     }
 
     public function testPostSigned(): void

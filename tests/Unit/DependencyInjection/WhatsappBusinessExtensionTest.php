@@ -154,6 +154,47 @@ final class WhatsappBusinessExtensionTest extends TestCase
         (new MergeExtensionConfigurationPass())->process($container);
     }
 
+    /**
+     * @return iterable<string, array{string, bool, bool}>
+     */
+    public static function effectiveUnsignedFlag(): iterable
+    {
+        yield 'dev with debug keeps the flag' => ['dev', true, true];
+        yield 'prod without debug forces false' => ['prod', false, false];
+        yield 'staging without debug forces false' => ['staging', false, false];
+        yield 'prod with debug forces false' => ['prod', true, false];
+    }
+
+    /**
+     * L3 (audit BU): with an %env()% app_secret the container compiles, but the effective flag is decided at
+     * compile time, so an empty secret at runtime still rejects unsigned webhooks outside debug kernels.
+     */
+    #[DataProvider('effectiveUnsignedFlag')]
+    public function testUnsignedFlagIsForcedFalseOutsideDebugEvenWithEnvSecret(string $environment, bool $debug, bool $expected): void
+    {
+        $container = $this->kernelContainer($environment, $debug);
+        (new WhatsappBusinessExtension())->load([[
+            'profiles' => ['default' => [
+                'phone_number_id'         => '111',
+                'access_token'            => 'REDACTED-TEST',
+                'app_secret'              => '%env(WHATSAPP_APP_SECRET)%',
+                'allow_unsigned_webhooks' => true,
+            ]],
+        ]], $container);
+
+        self::assertSame($expected, $container->getDefinition('nowo_whatsapp_business.profile.default')->getArgument('$allowUnsignedWebhooks'));
+    }
+
+    public function testUnsignedFlagIsFalseWithoutKernelParameters(): void
+    {
+        $container = new ContainerBuilder();
+        (new WhatsappBusinessExtension())->load([[
+            'profiles' => ['default' => ['phone_number_id' => '111', 'access_token' => 'REDACTED-TEST', 'allow_unsigned_webhooks' => true]],
+        ]], $container);
+
+        self::assertFalse($container->getDefinition('nowo_whatsapp_business.profile.default')->getArgument('$allowUnsignedWebhooks'));
+    }
+
     private function kernelContainer(string $environment, bool $debug): ContainerBuilder
     {
         $container = new ContainerBuilder();

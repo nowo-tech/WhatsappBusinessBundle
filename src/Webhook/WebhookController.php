@@ -32,6 +32,9 @@ use function json_decode;
  */
 final class WebhookController
 {
+    private const INVALID_VERIFY_TOKEN = 'Invalid webhook verify token.';
+    private const INVALID_SIGNATURE    = 'Invalid WhatsApp webhook signature.';
+
     /**
      * Creates the webhook endpoint with the profile registry, verifier, parser and event dispatcher.
      */
@@ -58,7 +61,10 @@ final class WebhookController
         } catch (UnknownProfileException) {
             $this->logger->warning('WhatsApp webhook for unknown profile.', ['profile' => $profile]);
 
-            return new Response('Unknown WhatsApp Business profile.', Response::HTTP_NOT_FOUND);
+            // Same status and body as a known profile with a bad token/signature: no profile-name enumeration.
+            return $request->isMethod('GET')
+                ? new Response(self::INVALID_VERIFY_TOKEN, Response::HTTP_FORBIDDEN)
+                : new Response(self::INVALID_SIGNATURE, Response::HTTP_FORBIDDEN);
         }
 
         $cloudProfile = $client->profile();
@@ -69,7 +75,7 @@ final class WebhookController
             $challenge = (string) $request->query->get('hub_challenge', $request->query->get('hub.challenge', ''));
 
             if (!$this->verifier->verifySubscribe($cloudProfile, $mode, $token)) {
-                return new Response('Invalid webhook verify token.', Response::HTTP_FORBIDDEN);
+                return new Response(self::INVALID_VERIFY_TOKEN, Response::HTTP_FORBIDDEN);
             }
 
             return new Response($challenge, Response::HTTP_OK, ['Content-Type' => 'text/plain']);
@@ -82,12 +88,23 @@ final class WebhookController
         } catch (WebhookVerificationException) {
             $this->logger->warning('WhatsApp webhook signature rejected.', ['profile' => $cloudProfile->name]);
 
-            return new Response('Invalid WhatsApp webhook signature.', Response::HTTP_FORBIDDEN);
+            return new Response(self::INVALID_SIGNATURE, Response::HTTP_FORBIDDEN);
         }
 
         /** @var mixed $decoded */
-        $decoded      = json_decode($rawBody, true);
-        $payload      = is_array($decoded) ? $decoded : [];
+        $decoded = json_decode($rawBody, true);
+        $payload = is_array($decoded) ? $decoded : [];
+
+        // Bind the signed payload to the profile in the URL: profiles of one Meta app share the app secret,
+        // so a body signed for another phone number must not be replayed onto this profile.
+        foreach ($this->parser->phoneNumberIds($payload) as $phoneNumberId) {
+            if ($phoneNumberId !== $cloudProfile->phoneNumberId) {
+                $this->logger->warning('WhatsApp webhook payload for another phone number id rejected.', ['profile' => $cloudProfile->name]);
+
+                return new Response('WhatsApp webhook payload does not belong to this profile.', Response::HTTP_FORBIDDEN);
+            }
+        }
+
         $notification = $this->parser->parse($payload);
 
         $this->eventDispatcher->dispatch(new WebhookReceivedEvent($cloudProfile->name, $notification));

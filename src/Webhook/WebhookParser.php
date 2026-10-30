@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Nowo\WhatsappBusinessBundle\Webhook;
 
+use function array_keys;
+use function array_map;
 use function is_array;
+use function is_scalar;
 use function is_string;
 
 /**
@@ -66,5 +69,36 @@ final class WebhookParser
         }
 
         return new WebhookNotification($object, $messages, $statuses, $payload);
+    }
+
+    /**
+     * Returns the distinct `metadata.phone_number_id` values of every change in a Graph webhook payload.
+     *
+     * @param array<string, mixed> $payload
+     *
+     * @return list<string>
+     */
+    public function phoneNumberIds(array $payload): array
+    {
+        $ids     = [];
+        $entries = $payload['entry'] ?? [];
+        if (!is_array($entries)) {
+            return [];
+        }
+        foreach ($entries as $entry) {
+            $changes = is_array($entry) ? ($entry['changes'] ?? []) : [];
+            if (!is_array($changes)) {
+                continue;
+            }
+            foreach ($changes as $change) {
+                $value    = is_array($change) ? ($change['value'] ?? []) : [];
+                $metadata = is_array($value) ? ($value['metadata'] ?? []) : [];
+                if (is_array($metadata) && isset($metadata['phone_number_id']) && is_scalar($metadata['phone_number_id'])) {
+                    $ids[(string) $metadata['phone_number_id']] = true;
+                }
+            }
+        }
+
+        return array_map('strval', array_keys($ids));
     }
 }

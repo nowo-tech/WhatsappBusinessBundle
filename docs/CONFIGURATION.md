@@ -43,7 +43,7 @@ nowo_whatsapp_business:
 | `timeout` | `10.0` | HttpClient idle + `max_duration` (seconds) |
 | `connect_timeout` | `5.0` | Applied via curl `CURLOPT_CONNECTTIMEOUT` when curl is available |
 | `app_secret` | `null` | HMAC key for `X-Hub-Signature-256` |
-| `webhook_verify_token` | `null` | GET `hub.verify_token` |
+| `webhook_verify_token` | `null` | GET `hub.verify_token` (the zero-config mock profile no longer ships `demo-verify`) |
 | `allow_unsigned_webhooks` | `false` | Demo only; literal boolean; with an empty `app_secret` it is refused unless `kernel.debug` is true (never in `prod`) |
 
 ## Environment variables
@@ -70,6 +70,9 @@ Under FrankenPHP (worker mode in particular) a hung Graph call would otherwise p
 - `GET /whatsapp/webhook` — subscription challenge
 - `POST /whatsapp/webhook` — inbound messages and statuses
 - `…/whatsapp/webhook/{profile}` — same, for a named profile
+- `X-Hub-Signature-256` must be `sha256=<hex>` (a bare digest is rejected)
+- A signed payload whose `entry[].changes[].value.metadata.phone_number_id` differs from the profile `phone_number_id` is rejected (403) and no event is dispatched
+- Unknown profile names get the same 403 response as a bad token / signature
 
 Production: set `app_secret` and `allow_unsigned_webhooks: false`. The container refuses to compile when a profile has `allow_unsigned_webhooks: true` without `app_secret` unless `kernel.debug` is true, and always in the `prod` environment (fail closed: staging / preprod kernels without debug are refused too). The value must be a literal boolean; `%env()%` is rejected so a runtime variable cannot bypass the check.
 
