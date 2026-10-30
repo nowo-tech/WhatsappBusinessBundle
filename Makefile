@@ -7,7 +7,7 @@ COMPOSE_BIN := $(shell docker compose version >/dev/null 2>&1 && echo "docker co
 COMPOSE     := $(COMPOSE_BIN) -f $(COMPOSE_FILE)
 SERVICE_PHP := php
 
-.PHONY: help up down down-dev build shell install test test-coverage coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos demo-smoke composer-sync rector rector-dry phpstan igor update validate setup-hooks check-no-cursor-coauthor check-open-prs check-no-raw-html-form strip-cursor-coauthor-from-history
+.PHONY: help up down down-dev build shell install test test-coverage coverage-check test-coverage-100 coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos demo-smoke composer-sync rector rector-dry phpstan igor update validate setup-hooks check-no-cursor-coauthor check-open-prs check-no-raw-html-form strip-cursor-coauthor-from-history
 
 help:
 	@echo "WhatsApp Business Bundle - Development Commands"
@@ -24,6 +24,7 @@ help:
 	@echo "  assets        No-op (no frontend in this bundle)"
 	@echo "  test          Run PHPUnit tests (starts container if needed)"
 	@echo "  test-coverage Run tests with code coverage (starts container if needed)"
+	@echo "  coverage-check Fail if PHP line coverage < 100% (alias: test-coverage-100)"
 	@echo "  cs-check      Check code style"
 	@echo "  cs-fix        Fix code style"
 	@echo "  rector        Apply Rector refactoring"
@@ -79,9 +80,16 @@ ensure-up:
 test: ensure-up
 	$(COMPOSE) exec $(SERVICE_PHP) composer test
 
+# REQ-TEST-006: fail when PHP line coverage is below 100% (composer coverage-check → .scripts/coverage-fail-under.sh).
+coverage-check: ensure-up
+	$(COMPOSE) exec -T $(SERVICE_PHP) composer coverage-check
+
+test-coverage-100: coverage-check
+
 test-coverage: ensure-up
 	$(COMPOSE) exec $(SERVICE_PHP) composer test-coverage | tee coverage-php.txt
 	./.scripts/php-coverage-percent.sh coverage-php.txt
+	sh .scripts/coverage-fail-under.sh coverage-php.txt 100
 
 cs-check: ensure-up
 	$(COMPOSE) exec -T $(SERVICE_PHP) composer cs-check

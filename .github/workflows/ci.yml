@@ -100,11 +100,12 @@ jobs:
           SYMFONY_DEPRECATIONS_HELPER: max[direct]=0
         run: composer test
 
-      - name: Run tests with coverage (PHP 8.2 + Symfony 7.4 only)
+      # REQ-TEST-003: fails the job when PHP line coverage is below 100% (.scripts/coverage-fail-under.sh).
+      - name: Coverage gate 100% (PHP 8.2 + Symfony 7.4 only)
         if: matrix.php == '8.2' && matrix.symfony == '7.4'
         env:
           SYMFONY_DEPRECATIONS_HELPER: max[direct]=0
-        run: composer test-coverage
+        run: composer coverage-check
 
   cs-check:
     name: Code Style Check
