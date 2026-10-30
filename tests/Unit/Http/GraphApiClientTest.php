@@ -13,12 +13,18 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use RuntimeException;
+use Symfony\Component\ErrorHandler\Exception\FlattenException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
+use function bin2hex;
 use function extension_loaded;
+use function ini_set;
+use function json_encode;
+use function print_r;
+use function random_bytes;
 
 use const CURLOPT_CONNECTTIMEOUT;
 
@@ -191,6 +197,54 @@ final class GraphApiClientTest extends TestCase
         }
         if (extension_loaded('curl')) {
             self::assertSame(5, $seen[0]['extra']['curl'][CURLOPT_CONNECTTIMEOUT]);
+        }
+    }
+
+    /**
+     * L1 (audit BU): the bearer token must not appear in exception trace arguments (FlattenException,
+     * error trackers) even with zend.exception_ignore_args=Off.
+     */
+    public function testAccessTokenNeverAppearsInExceptionTraceArguments(): void
+    {
+        $previous = ini_set('zend.exception_ignore_args', '0');
+        $token    = 'REDACTED-TEST-' . bin2hex(random_bytes(8));
+        $profile  = new CloudApiProfile(
+            name: 'default',
+            phoneNumberId: '123456',
+            accessToken: $token,
+            transport: TransportKind::Cloud,
+            whatsappBusinessAccountId: 'waba-1',
+            graphVersion: 'v21.0',
+            graphBaseUri: 'https://graph.facebook.com',
+            timeout: 10.0,
+            connectTimeout: 5.0,
+            appSecret: 'app-secret',
+            webhookVerifyToken: 'verify-me',
+            allowUnsignedWebhooks: false,
+        );
+        $client = new GraphApiClient(new MockHttpClient([
+            new MockResponse('{"error":{"message":"Recipient not allowed","code":131030}}', ['http_code' => 400]),
+            new MockResponse('<html>proxy</html>', ['http_code' => 502]),
+        ]), $profile);
+
+        try {
+            foreach ([
+                static fn (): array => $client->postJson('123456/messages', ['to' => '34611111111']),
+                static fn (): array => $client->get('x', ['fields' => 'id']),
+            ] as $call) {
+                try {
+                    $call();
+                    self::fail('GraphApiException expected.');
+                } catch (GraphApiException $exception) {
+                    $flat = FlattenException::createFromThrowable($exception);
+                    self::assertStringNotContainsString($token, (string) json_encode($flat->getTrace()));
+                    self::assertStringNotContainsString($token, print_r($exception->getTrace(), true));
+                }
+            }
+        } finally {
+            if ($previous !== false) {
+                ini_set('zend.exception_ignore_args', $previous);
+            }
         }
     }
 }

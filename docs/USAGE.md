@@ -109,9 +109,9 @@ framework:
 
 ### Retries and failure transport
 
-- The handler does **not** retry by itself and does not swallow errors: any `GraphApiException` (HTTP 4xx/5xx, Graph error envelope, transport failure / timeout) and `UnknownProfileException` is rethrown, so Messenger applies the transport `retry_strategy` and finally moves the message to `failure_transport`.
+- The handler does **not** retry by itself and does not swallow errors. Transient failures — `GraphApiException` with HTTP 429, 5xx or status `0` (transport failure / timeout) — are rethrown, so Messenger applies the transport `retry_strategy` and finally moves the message to `failure_transport`.
 - `MessageSendFailedEvent` is dispatched for every failed attempt (`GraphApiException` carries `httpStatus`, `graphCode`, `subcode`, `fbtraceId`; tokens are redacted).
-- Permanent errors (invalid recipient, template not approved, 4xx other than 429) will not succeed on retry. If you want to skip retries for them, decorate the handler or listen to `MessageSendFailedEvent` and throw Symfony `UnrecoverableMessageHandlingException` for those codes.
+- Permanent errors — Graph 4xx other than 429 (invalid recipient, template not approved, …) and `UnknownProfileException` — are wrapped in Symfony `UnrecoverableMessageHandlingException` (the original exception is `getPrevious()`): no retry, straight to the failure transport.
 - Inspect / replay failures with `bin/console messenger:failed:show` and `messenger:failed:retry`.
 
 ### Idempotency

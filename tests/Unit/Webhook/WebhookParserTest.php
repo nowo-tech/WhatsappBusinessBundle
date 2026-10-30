@@ -82,4 +82,24 @@ final class WebhookParserTest extends TestCase
         $withRecipient = StatusUpdate::fromGraph(['recipient_id' => '34611111111']);
         self::assertSame('*******1111', $withRecipient->__debugInfo()['recipientId']);
     }
+
+    public function testPhoneNumberIds(): void
+    {
+        $parser = new WebhookParser();
+        self::assertSame([], $parser->phoneNumberIds([]));
+        self::assertSame([], $parser->phoneNumberIds(['entry' => 'x']));
+        self::assertSame(['111', '222'], $parser->phoneNumberIds(['entry' => [
+            'skip',
+            ['changes' => 'skip'],
+            ['changes' => [
+                'skip',
+                ['value' => 'skip'],
+                ['value' => ['metadata' => 'skip']],
+                ['value' => ['metadata' => ['phone_number_id' => ['nested']]]],
+                ['value' => ['metadata' => ['phone_number_id' => '111']]],
+                ['value' => ['metadata' => ['phone_number_id' => 111]]],
+                ['value' => ['metadata' => ['phone_number_id' => 222]]],
+            ]],
+        ]]));
+    }
 }

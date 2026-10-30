@@ -19,7 +19,9 @@ use Nowo\WhatsappBusinessBundle\Tests\Unit\Support\ProfileFactory;
 use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
 use Nowo\WhatsappBusinessBundle\Transport\TransportInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
 
 #[CoversClass(SendOutgoingMessageHandler::class)]
 #[CoversClass(SendOutgoingMessage::class)]
@@ -35,24 +37,45 @@ final class SendOutgoingMessageHandlerTest extends TestCase
         self::assertStringStartsWith('mock.', $result->messageId);
     }
 
-    public function testUnknownProfileIsRethrownForMessengerFailurePolicy(): void
+    public function testUnknownProfileIsUnrecoverable(): void
     {
         $client  = new WhatsappClient(ProfileFactory::mock(), new MockTransport(ProfileFactory::mock()));
         $handler = new SendOutgoingMessageHandler(new WhatsappClientRegistry(['default' => $client], 'default'));
 
-        $this->expectException(UnknownProfileException::class);
-        $handler(new SendOutgoingMessage(
-            new OutgoingEnvelope(PhoneNumber::parse('34611111111'), new TextMessage('hi')),
-            'missing',
-        ));
+        try {
+            $handler(new SendOutgoingMessage(
+                new OutgoingEnvelope(PhoneNumber::parse('34611111111'), new TextMessage('hi')),
+                'missing',
+            ));
+            self::fail('UnrecoverableMessageHandlingException expected.');
+        } catch (UnrecoverableMessageHandlingException $exception) {
+            self::assertInstanceOf(UnknownProfileException::class, $exception->getPrevious());
+        }
     }
 
-    public function testGraphFailureIsRethrownSoMessengerCanRetry(): void
+    /**
+     * @return iterable<string, array{int, bool}>
+     */
+    public static function graphFailures(): iterable
     {
-        $failing = new class implements TransportInterface {
+        yield 'rate limit 429 is retried' => [429, false];
+        yield 'server error 503 is retried' => [503, false];
+        yield 'transport failure is retried' => [0, false];
+        yield 'invalid recipient 400 is permanent' => [400, true];
+        yield 'not found 404 is permanent' => [404, true];
+    }
+
+    #[DataProvider('graphFailures')]
+    public function testGraphFailuresAreRetriedOnlyWhenTransient(int $status, bool $unrecoverable): void
+    {
+        $failing = new class($status) implements TransportInterface {
+            public function __construct(private readonly int $status)
+            {
+            }
+
             public function send(array $graphBody): array
             {
-                throw GraphApiException::fromGraph(['error' => ['message' => 'Rate limit hit', 'code' => 130429]], 429);
+                throw GraphApiException::fromGraph(['error' => ['message' => 'Graph error', 'code' => 131030]], $this->status);
             }
 
             public function markAsRead(string $messageId): void
@@ -81,10 +104,14 @@ final class SendOutgoingMessageHandlerTest extends TestCase
             $handler(new SendOutgoingMessage(
                 new OutgoingEnvelope(PhoneNumber::parse('34611111111'), new TextMessage('hi')),
             ));
-            self::fail('GraphApiException expected.');
+            self::fail('Exception expected.');
+        } catch (UnrecoverableMessageHandlingException $exception) {
+            self::assertTrue($unrecoverable);
+            self::assertInstanceOf(GraphApiException::class, $exception->getPrevious());
+            self::assertSame($status, $exception->getCode());
         } catch (GraphApiException $exception) {
-            self::assertSame(429, $exception->httpStatus);
-            self::assertSame(130429, $exception->graphCode);
+            self::assertFalse($unrecoverable);
+            self::assertSame($status, $exception->httpStatus);
         }
     }
 }
