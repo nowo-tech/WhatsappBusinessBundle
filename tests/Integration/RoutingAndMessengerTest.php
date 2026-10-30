@@ -21,7 +21,11 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
+use Symfony\Component\Routing\Loader\AttributeServicesLoader;
 use Symfony\Component\Routing\RouterInterface;
+
+use function class_exists;
+use function md5;
 
 /**
  * Boots a host-like kernel: attribute routes through the BC routing.yaml import (REQ-SF-004)
@@ -64,6 +68,24 @@ final class RoutingAndMessengerTest extends TestCase
         self::assertSame('/whatsapp/webhook/support', $router->generate('nowo_whatsapp_business_webhook_profile', ['profile' => 'support']));
     }
 
+    /**
+     * Symfony >= 7.3 hosts load every routing.controller service through `routing.controllers`; the webhook
+     * must not appear there unless the host imports the bundle routing explicitly.
+     */
+    public function testWebhookRoutesAreNotExposedThroughRoutingControllers(): void
+    {
+        if (!class_exists(AttributeServicesLoader::class)) {
+            self::markTestSkipped('routing.controllers needs Symfony 7.3+.');
+        }
+
+        $router = $this->bootKernel('routes_controllers_only.yaml')->getContainer()->get('router');
+        self::assertInstanceOf(RouterInterface::class, $router);
+        $routes = $router->getRouteCollection();
+
+        self::assertNull($routes->get('nowo_whatsapp_business_webhook'));
+        self::assertNull($routes->get('nowo_whatsapp_business_webhook_profile'));
+    }
+
     public function testSendOutgoingMessageIsHandledOnceBySyncBus(): void
     {
         $container = $this->bootKernel()->getContainer()->get('test.service_container');
@@ -82,9 +104,14 @@ final class RoutingAndMessengerTest extends TestCase
         self::assertStringStartsWith('mock.', $result->messageId);
     }
 
-    private function bootKernel(): Kernel
+    private function bootKernel(string $routes = 'routes.yaml'): Kernel
     {
-        $this->kernel = new class('test', true) extends Kernel {
+        $this->kernel = new class('test', true, __DIR__ . '/Fixtures/' . $routes) extends Kernel {
+            public function __construct(string $environment, bool $debug, private readonly string $routesFile)
+            {
+                parent::__construct($environment, $debug);
+            }
+
             public function registerBundles(): iterable
             {
                 return [new FrameworkBundle(), new WhatsappBusinessBundle()];
@@ -92,7 +119,8 @@ final class RoutingAndMessengerTest extends TestCase
 
             public function registerContainerConfiguration(LoaderInterface $loader): void
             {
-                $loader->load(static function (ContainerBuilder $container): void {
+                $routesFile = $this->routesFile;
+                $loader->load(static function (ContainerBuilder $container) use ($routesFile): void {
                     $container->loadFromExtension('framework', [
                         'secret'                => 'test',
                         'test'                  => true,
@@ -102,7 +130,7 @@ final class RoutingAndMessengerTest extends TestCase
                         'http_client'           => ['enabled' => true],
                         'messenger'             => ['enabled' => true],
                         'router'                => [
-                            'resource' => __DIR__ . '/Fixtures/routes.yaml',
+                            'resource' => $routesFile,
                             'utf8'     => true,
                         ],
                     ]);
@@ -112,7 +140,7 @@ final class RoutingAndMessengerTest extends TestCase
 
             public function getCacheDir(): string
             {
-                return sys_get_temp_dir() . '/whatsapp-business-bundle-routing-test/' . spl_object_id($this);
+                return sys_get_temp_dir() . '/whatsapp-business-bundle-routing-test/' . md5($this->routesFile) . '/' . spl_object_id($this);
             }
 
             public function getLogDir(): string

@@ -14,7 +14,6 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
@@ -25,10 +24,12 @@ use function json_decode;
 /**
  * Cloud API webhook: GET subscribe challenge + POST signed notifications.
  *
+ * Registered explicitly (public, `controller.service_arguments`, `autoconfigure: false`) so its #[Route]
+ * attributes are only loaded when the host imports the bundle routing (never through `routing.controllers`).
+ *
  * @author Héctor Franco Aceituno <hectorfranco@nowo.tech>
  * @copyright 2026 Nowo.tech
  */
-#[AsController]
 final class WebhookController
 {
     /**

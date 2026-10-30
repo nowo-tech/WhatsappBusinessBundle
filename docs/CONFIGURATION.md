@@ -44,7 +44,7 @@ nowo_whatsapp_business:
 | `connect_timeout` | `5.0` | Applied via curl `CURLOPT_CONNECTTIMEOUT` when curl is available |
 | `app_secret` | `null` | HMAC key for `X-Hub-Signature-256` |
 | `webhook_verify_token` | `null` | GET `hub.verify_token` |
-| `allow_unsigned_webhooks` | `false` | Demo only; refused in `prod` when `app_secret` is empty |
+| `allow_unsigned_webhooks` | `false` | Demo only; literal boolean; with an empty `app_secret` it is refused unless `kernel.debug` is true (never in `prod`) |
 
 ## Environment variables
 
@@ -71,8 +71,8 @@ Under FrankenPHP (worker mode in particular) a hung Graph call would otherwise p
 - `POST /whatsapp/webhook` — inbound messages and statuses
 - `…/whatsapp/webhook/{profile}` — same, for a named profile
 
-Production: set `app_secret` and `allow_unsigned_webhooks: false`. The container refuses to compile in the `prod` environment when a profile has `allow_unsigned_webhooks: true` without `app_secret` (fail closed).
+Production: set `app_secret` and `allow_unsigned_webhooks: false`. The container refuses to compile when a profile has `allow_unsigned_webhooks: true` without `app_secret` unless `kernel.debug` is true, and always in the `prod` environment (fail closed: staging / preprod kernels without debug are refused too). The value must be a literal boolean; `%env()%` is rejected so a runtime variable cannot bypass the check.
 
-Routes are declared with `#[Route]` attributes on `WebhookController` (REQ-SF-004); `@WhatsappBusinessBundle/Resources/config/routing.yaml` is a thin attribute import kept for backward compatibility (route names `nowo_whatsapp_business_webhook` and `nowo_whatsapp_business_webhook_profile` are unchanged).
+Routes are declared with `#[Route]` attributes on `WebhookController` (REQ-SF-004); `@WhatsappBusinessBundle/Resources/config/routing.yaml` is a thin attribute import kept for backward compatibility (route names `nowo_whatsapp_business_webhook` and `nowo_whatsapp_business_webhook_profile` are unchanged). The routes are opt-in: the controller service is not autoconfigured, so a Symfony 7.3+ host `controllers: { resource: routing.controllers }` import does not expose the webhook unless you import the bundle routing.
 
 Media downloads (`downloadMedia`) only follow HTTPS URLs on Meta hosts (`*.facebook.com`, `*.fbsbx.com`, `*.fbcdn.net`, …) or the host of `graph_base_uri`. Query strings on dumped media URLs are redacted. Media ids passed to `downloadMedia()` must match `^[0-9A-Za-z_-]+$` (otherwise `InvalidMediaIdException`); HTTP errors and non-JSON Graph responses are reported as `GraphApiException`.

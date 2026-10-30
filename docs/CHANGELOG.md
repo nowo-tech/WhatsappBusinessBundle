@@ -23,13 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- The container refuses to compile in the `prod` environment when a profile sets `allow_unsigned_webhooks: true` without `app_secret` (a copied dev config would otherwise accept forged webhooks on a public endpoint).
-- `docs/SECURITY.md`: the release security checklist (12.4.1) now covers all REQ-SEC-002 items (SECURITY docs, `.env`, secrets, recipe, input/output, `composer audit`, logs, crypto, exposure, limits/DoS) plus the REQ-SEC-004 audit row; threat model lists oversized webhook bodies and the prod guard.
+- The container refuses to compile when a profile sets `allow_unsigned_webhooks: true` without `app_secret` unless `kernel.debug` is true (and always in `prod`), so staging / preprod kernels without debug fail closed too; a copied dev config would otherwise accept forged webhooks on a public endpoint. `allow_unsigned_webhooks` must be a literal boolean (`%env()%` is rejected).
+- `docs/SECURITY.md`: the release security checklist (12.4.1) now covers all REQ-SEC-002 items (SECURITY docs, `.env`, secrets, recipe, input/output, `composer audit`, logs, crypto, exposure, limits/DoS) plus the REQ-SEC-004 audit row; threat model lists oversized webhook bodies and the unsigned-webhook guard.
 
 ### Changed
 
 - Dependencies: `symfony/mime` lock bumped (bundle 7.4.22, demo 8.1.10) for CVE-2026-45070 so `composer audit --locked` is clean.
-- Webhook routes are declared with `#[Route]` attributes on `WebhookController` (REQ-SF-004). `Resources/config/routing.yaml` is now a thin attribute import kept for backward compatibility; route names, paths, methods and requirements are unchanged.
+- Webhook routes are declared with `#[Route]` attributes on `WebhookController` (REQ-SF-004). `Resources/config/routing.yaml` is now a thin attribute import kept for backward compatibility; route names, paths, methods and requirements are unchanged. The controller is registered explicitly with `autoconfigure: false` (no `#[AsController]`), so on Symfony 7.3+ the host `routing.controllers` import never exposes the webhook: the routes stay opt-in.
 - `SendOutgoingMessageHandler` is registered with `#[AsMessageHandler]` instead of an explicit `messenger.message_handler` tag (REQ-MSG-001); USAGE documents transport expectations, retries, failure transport, idempotency and logging.
 - PHPDoc with an English description on every public method in `src/` (REQ-CS-001).
 - PHPStan: the empty `phpstan-baseline.neon` is removed; `phpstan.neon.dist` states `ignoreErrors: []` (REQ-CS-006).
