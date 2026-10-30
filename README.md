@@ -102,7 +102,7 @@ final class NotifyCustomer
 
 ## Configuration
 
-Named profiles are documented in [docs/CONFIGURATION.md](docs/CONFIGURATION.md). Timeouts follow REQ-RUNTIME-001 (`timeout` + `connect_timeout`).
+Named profiles are documented in [docs/CONFIGURATION.md](docs/CONFIGURATION.md). Timeouts follow REQ-RUNTIME-001 (`timeout` + `connect_timeout` on every Graph call); under FrankenPHP keep PHP `max_execution_time` and the Caddy write timeout above them and cap the thread queue with `max_wait_time` ([timeout hierarchy](docs/CONFIGURATION.md#timeouts-req-runtime-001)).
 
 ## Host application integration
 
