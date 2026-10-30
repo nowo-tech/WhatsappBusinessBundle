@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Dependencies: `symfony/mime` lock bumped (bundle 7.4.22, demo 8.1.10) for CVE-2026-45070 so `composer audit --locked` is clean.
 - Webhook routes are declared with `#[Route]` attributes on `WebhookController` (REQ-SF-004). `Resources/config/routing.yaml` is now a thin attribute import kept for backward compatibility; route names, paths, methods and requirements are unchanged.
 - `SendOutgoingMessageHandler` is registered with `#[AsMessageHandler]` instead of an explicit `messenger.message_handler` tag (REQ-MSG-001); USAGE documents transport expectations, retries, failure transport, idempotency and logging.
 - PHPDoc with an English description on every public method in `src/` (REQ-CS-001).

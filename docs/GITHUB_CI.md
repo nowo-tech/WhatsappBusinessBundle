@@ -255,4 +255,4 @@ Until Actions can run (billing fixed, self-hosted runner, or public repository),
 
 | Date (UTC) | Commit | Gates | Result |
 |------------|--------|-------|--------|
-
+| 2026-10-30 15:12 | `e6d0b63` (PR branch `req100`; later commits on the branch are docs-only) | composer validate, check-no-cursor-coauthor, check-no-raw-html-form, cs-check, rector-dry, phpstan, igor, PHPUnit 118 tests + 100% line coverage (PHP 8.2, Symfony 7.4 lock), composer audit --locked, demo release-check (Symfony 8.1, FrankenPHP worker, HTTP 200) | All green |
