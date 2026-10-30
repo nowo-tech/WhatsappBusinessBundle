@@ -15,6 +15,7 @@ use Nowo\WhatsappBusinessBundle\Exception\UnknownProfileException;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiClient;
 use Nowo\WhatsappBusinessBundle\Transport\CloudApiTransport;
 use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
@@ -40,6 +41,8 @@ use function sprintf;
 final class WhatsappBusinessExtension extends Extension
 {
     /**
+     * Loads the bundle services and registers one profile, transport and client per configured profile.
+     *
      * @param array<int, array<string, mixed>> $configs
      */
     public function load(array $configs, ContainerBuilder $container): void
@@ -61,8 +64,15 @@ final class WhatsappBusinessExtension extends Extension
             throw UnknownProfileException::forProfile($defaultProfile);
         }
 
+        $environment = $container->hasParameter('kernel.environment') ? $container->getParameter('kernel.environment') : null;
+
         $clientRefs = [];
         foreach ($config['profiles'] as $name => $profileConfig) {
+            // Fail closed: unsigned webhooks on a public prod endpoint would accept forged notifications.
+            if ($environment === 'prod' && $profileConfig['allow_unsigned_webhooks'] === true && ($profileConfig['app_secret'] ?? '') === '') {
+                throw new InvalidConfigurationException(sprintf('nowo_whatsapp_business.profiles.%s.allow_unsigned_webhooks cannot be true without app_secret in the "prod" environment: set app_secret so webhooks are HMAC-verified.', $name));
+            }
+
             $clientRefs[(string) $name] = new Reference($this->registerProfile($container, (string) $name, $profileConfig));
         }
 
@@ -175,6 +185,9 @@ final class WhatsappBusinessExtension extends Extension
         return $clientId;
     }
 
+    /**
+     * Returns the configuration alias (nowo_whatsapp_business).
+     */
     public function getAlias(): string
     {
         return 'nowo_whatsapp_business';
