@@ -9,4 +9,6 @@ nowo_whatsapp_business:
             webhook_verify_token: '%env(default::WHATSAPP_WEBHOOK_VERIFY_TOKEN)%'
             timeout: 10.0
             connect_timeout: 5.0
-            allow_unsigned_webhooks: true
+            # Unsigned mock webhooks only while kernel.debug is on; the bundle refuses them otherwise
+            # (no app_secret here), so APP_ENV=prod / APP_DEBUG=0 keeps compiling with signature checks on.
+            allow_unsigned_webhooks: '%kernel.debug%'
