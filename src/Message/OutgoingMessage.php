@@ -12,6 +12,9 @@ namespace Nowo\WhatsappBusinessBundle\Message;
  */
 interface OutgoingMessage
 {
+    /**
+     * Returns the Graph `type` of this message.
+     */
     public function type(): MessageType;
 
     /**

@@ -14,7 +14,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\AsController;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 use function count;
@@ -24,12 +24,17 @@ use function json_decode;
 /**
  * Cloud API webhook: GET subscribe challenge + POST signed notifications.
  *
+ * Registered explicitly (public, `controller.service_arguments`, `autoconfigure: false`) so its #[Route]
+ * attributes are only loaded when the host imports the bundle routing (never through `routing.controllers`).
+ *
  * @author Héctor Franco Aceituno <hectorfranco@nowo.tech>
  * @copyright 2026 Nowo.tech
  */
-#[AsController]
 final class WebhookController
 {
+    /**
+     * Creates the webhook endpoint with the profile registry, verifier, parser and event dispatcher.
+     */
     public function __construct(
         private readonly WhatsappClientRegistryInterface $registry,
         private readonly WebhookVerifier $verifier,
@@ -39,6 +44,13 @@ final class WebhookController
     ) {
     }
 
+    /**
+     * Answers the GET subscribe challenge or verifies, parses and dispatches a signed POST notification.
+     *
+     * Route names and paths are stable since 1.0 (REQ-SF-004 / REQ-BC-001).
+     */
+    #[Route('/whatsapp/webhook', name: 'nowo_whatsapp_business_webhook', defaults: ['profile' => null], methods: ['GET', 'POST'])]
+    #[Route('/whatsapp/webhook/{profile}', name: 'nowo_whatsapp_business_webhook_profile', requirements: ['profile' => '[a-zA-Z0-9_-]+'], methods: ['GET', 'POST'])]
     public function __invoke(Request $request, ?string $profile = null): Response
     {
         try {

@@ -15,6 +15,8 @@ use function is_string;
 final readonly class MessageTemplate
 {
     /**
+     * Creates one message template entry.
+     *
      * @param array<string, mixed> $raw
      */
     public function __construct(
@@ -28,6 +30,8 @@ final readonly class MessageTemplate
     }
 
     /**
+     * Creates the entry from one Graph message_templates item.
+     *
      * @param array<string, mixed> $payload
      */
     public static function fromGraph(array $payload): self

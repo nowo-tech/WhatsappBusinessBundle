@@ -18,6 +18,8 @@ use function is_string;
 final readonly class IncomingMessage
 {
     /**
+     * Creates one inbound message.
+     *
      * @param array<string, mixed> $raw
      */
     public function __construct(
@@ -31,6 +33,8 @@ final readonly class IncomingMessage
     }
 
     /**
+     * Creates the inbound message from one Graph webhook messages item.
+     *
      * @param array<string, mixed> $payload
      */
     public static function fromGraph(array $payload): self
@@ -48,6 +52,8 @@ final readonly class IncomingMessage
     }
 
     /**
+     * Returns the dump representation with secrets, payloads and phone numbers redacted.
+     *
      * @return array<string, mixed>
      */
     public function __debugInfo(): array

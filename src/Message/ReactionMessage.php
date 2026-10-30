@@ -12,17 +12,26 @@ namespace Nowo\WhatsappBusinessBundle\Message;
  */
 final readonly class ReactionMessage implements OutgoingMessage
 {
+    /**
+     * Creates an emoji reaction to an existing message id.
+     */
     public function __construct(
         public string $messageId,
         public string $emoji,
     ) {
     }
 
+    /**
+     * Returns the reaction message type.
+     */
     public function type(): MessageType
     {
         return MessageType::Reaction;
     }
 
+    /**
+     * Returns the Graph `reaction` field.
+     */
     public function graphFields(): array
     {
         return [

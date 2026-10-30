@@ -12,11 +12,19 @@ namespace Nowo\WhatsappBusinessBundle\Client;
  */
 interface WhatsappClientRegistryInterface
 {
+    /**
+     * Returns the client of the given profile, or of the default profile when null.
+     */
     public function get(?string $profile = null): WhatsappClientInterface;
 
+    /**
+     * Tells whether a profile with this name is configured.
+     */
     public function has(string $profile): bool;
 
     /**
+     * Returns the configured profile names.
+     *
      * @return list<string>
      */
     public function names(): array;

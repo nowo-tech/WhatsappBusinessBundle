@@ -23,6 +23,9 @@ use function is_string;
 #[AsCommand(name: 'whatsapp:send-text', description: 'Send a WhatsApp Cloud API text message')]
 final class SendTextCommand extends Command
 {
+    /**
+     * Creates the command with the profile registry.
+     */
     public function __construct(
         private readonly WhatsappClientRegistryInterface $registry,
     ) {

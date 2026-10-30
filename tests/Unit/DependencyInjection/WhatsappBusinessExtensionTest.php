@@ -15,7 +15,10 @@ use Nowo\WhatsappBusinessBundle\Http\GraphApiClient;
 use Nowo\WhatsappBusinessBundle\Transport\CloudApiTransport;
 use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\DependencyInjection\Compiler\MergeExtensionConfigurationPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 #[CoversClass(WhatsappBusinessExtension::class)]
@@ -81,5 +84,82 @@ final class WhatsappBusinessExtensionTest extends TestCase
                 ],
             ],
         ]], new ContainerBuilder());
+    }
+
+    /**
+     * @return iterable<string, array{string, bool}>
+     */
+    public static function refusedKernels(): iterable
+    {
+        yield 'prod, debug off' => ['prod', false];
+        yield 'staging, debug off' => ['staging', false];
+        yield 'preprod, debug off' => ['preprod', false];
+        yield 'prod, debug on' => ['prod', true];
+    }
+
+    #[DataProvider('refusedKernels')]
+    public function testUnsignedWebhooksWithoutAppSecretAreRefusedUnlessDebug(string $environment, bool $debug): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('profiles.public.allow_unsigned_webhooks cannot be true without app_secret');
+        (new WhatsappBusinessExtension())->load([[
+            'default_profile' => 'public',
+            'profiles'        => [
+                'public' => [
+                    'phone_number_id'         => '111',
+                    'access_token'            => 'REDACTED-TEST',
+                    'allow_unsigned_webhooks' => true,
+                ],
+            ],
+        ]], $this->kernelContainer($environment, $debug));
+    }
+
+    public function testUnsignedWebhooksStayAllowedInDebugOrWithAppSecret(): void
+    {
+        $dev = $this->kernelContainer('dev', true);
+        (new WhatsappBusinessExtension())->load([[
+            'profiles' => ['default' => ['phone_number_id' => '111', 'access_token' => 'REDACTED-TEST', 'allow_unsigned_webhooks' => true]],
+        ]], $dev);
+        self::assertTrue($dev->hasDefinition('nowo_whatsapp_business.profile.default'));
+
+        $prod = $this->kernelContainer('prod', false);
+        (new WhatsappBusinessExtension())->load([[
+            'profiles' => ['default' => [
+                'phone_number_id'         => '111',
+                'access_token'            => 'REDACTED-TEST',
+                'app_secret'              => 'REDACTED-TEST',
+                'allow_unsigned_webhooks' => true,
+            ]],
+        ]], $prod);
+        self::assertTrue($prod->hasDefinition('nowo_whatsapp_business.profile.default'));
+    }
+
+    public function testAllowUnsignedWebhooksMustBeALiteralBoolean(): void
+    {
+        $container = $this->kernelContainer('prod', false);
+        $container->registerExtension(new WhatsappBusinessExtension());
+        $placeholder = $container->getParameterBag()->get('env(bool:WHATSAPP_ALLOW_UNSIGNED)');
+        self::assertIsString($placeholder);
+        $container->loadFromExtension('nowo_whatsapp_business', [
+            'profiles' => ['default' => [
+                'phone_number_id'         => '111',
+                'access_token'            => 'REDACTED-TEST',
+                'app_secret'              => 'REDACTED-TEST',
+                'allow_unsigned_webhooks' => $placeholder,
+            ]],
+        ]);
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('allow_unsigned_webhooks must be a literal boolean');
+        (new MergeExtensionConfigurationPass())->process($container);
+    }
+
+    private function kernelContainer(string $environment, bool $debug): ContainerBuilder
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', $environment);
+        $container->setParameter('kernel.debug', $debug);
+
+        return $container;
     }
 }

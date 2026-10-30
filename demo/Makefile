@@ -3,7 +3,7 @@
 
 DEMOS := symfony8
 
-.PHONY: help clean test-all test-coverage-all verify-all release-verify
+.PHONY: help clean test-all test-coverage-all verify-all release-verify release-check update-bundle-all
 .PHONY: $(foreach d,$(DEMOS),up-$d down-$d restart-$d build-$d install-$d update-bundle-$d shell-$d logs-$d test-$d test-coverage-$d verify-$d)
 .PHONY: up down restart build install update-bundle test shell logs test-coverage verify
 
@@ -32,6 +32,8 @@ help:
 	@echo "  test-all            Run tests in all demos"
 	@echo "  test-coverage-all   Run tests with coverage in all demos"
 	@echo "  verify-all          Verify all demos (up + HTTP 200)"
+	@echo "  update-bundle-all   Sync the bundle into every demo (composer update + cache:clear)"
+	@echo "  release-check       update-bundle-all + test-coverage-all + release-verify"
 	@echo "  release-verify      For release-check: up each demo, HTTP 200, down"
 	@echo "  clean               Remove vendor and var from all demos"
 	@echo ""
@@ -114,7 +116,11 @@ test-coverage-all:
 verify-all:
 	@$(MAKE) verify-symfony8
 
-release-check: test-coverage-all release-verify
+# REQ-DEMO-007: sync the bundle (path repository) into every demo before tests and the HTTP check.
+update-bundle-all:
+	@for demo in $(DEMOS); do $(MAKE) update-bundle-$$demo || exit 1; done
+
+release-check: update-bundle-all test-coverage-all release-verify
 	@echo "All demos passed release-check."
 
 release-verify:

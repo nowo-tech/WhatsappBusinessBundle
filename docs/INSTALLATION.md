@@ -30,13 +30,23 @@ return [
 ];
 ```
 
-Import routes:
+Import routes (the webhook controller declares `#[Route]` attributes; `routing.yaml` is a thin attribute import, REQ-SF-004):
 
 ```yaml
 # config/routes/nowo_whatsapp_business.yaml
 nowo_whatsapp_business:
     resource: '@WhatsappBusinessBundle/Resources/config/routing.yaml'
 ```
+
+Equivalent direct attribute import:
+
+```yaml
+nowo_whatsapp_business:
+    resource: '@WhatsappBusinessBundle/Webhook/WebhookController.php'
+    type: attribute
+```
+
+Check with `php bin/console debug:router | grep whatsapp` (`nowo_whatsapp_business_webhook`, `nowo_whatsapp_business_webhook_profile`).
 
 Then add configuration (see [CONFIGURATION.md](CONFIGURATION.md)). Enable `framework.http_client` if it is not already on.
 

@@ -22,6 +22,9 @@ final class SecretRedactor
 {
     public const PLACEHOLDER = '[redacted]';
 
+    /**
+     * Replaces access tokens, Bearer credentials and secret query parameters with a placeholder.
+     */
     public static function redactString(string $value): string
     {
         $value = preg_replace('/\bEAA[A-Za-z0-9]{8,}/', self::PLACEHOLDER, $value) ?? $value;
@@ -35,6 +38,8 @@ final class SecretRedactor
     }
 
     /**
+     * Redacts secret-named keys and secret-looking string values recursively.
+     *
      * @param array<string, mixed> $value
      *
      * @return array<string, mixed>
@@ -63,6 +68,9 @@ final class SecretRedactor
         return $out;
     }
 
+    /**
+     * Masks a phone number except its last four digits.
+     */
     public static function maskPhone(string $value): string
     {
         $length = strlen($value);
@@ -76,6 +84,9 @@ final class SecretRedactor
         return str_repeat('*', $length - 4) . substr($value, -4);
     }
 
+    /**
+     * Keeps scheme, host and path of a URL and hides its query string.
+     */
     public static function redactUrl(?string $url): ?string
     {
         if ($url === null || $url === '') {

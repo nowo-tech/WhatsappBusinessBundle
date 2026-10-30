@@ -44,7 +44,7 @@ nowo_whatsapp_business:
 | `connect_timeout` | `5.0` | Applied via curl `CURLOPT_CONNECTTIMEOUT` when curl is available |
 | `app_secret` | `null` | HMAC key for `X-Hub-Signature-256` |
 | `webhook_verify_token` | `null` | GET `hub.verify_token` |
-| `allow_unsigned_webhooks` | `false` | Demo only; never enable in production |
+| `allow_unsigned_webhooks` | `false` | Demo only; literal boolean; with an empty `app_secret` it is refused unless `kernel.debug` is true (never in `prod`) |
 
 ## Environment variables
 
@@ -52,7 +52,18 @@ Documented in the Flex recipe. Do not commit `.env` files with real tokens.
 
 ## Timeouts (REQ-RUNTIME-001)
 
-Keep PHP `max_execution_time` and reverse-proxy write timeouts **greater** than `timeout`. Under FrankenPHP worker mode, a hung Graph call would otherwise pin a worker.
+Every Graph request (`postJson`, `get`, `delete`, `postMedia`) and every media download sets HttpClient `timeout` and `max_duration` to the profile `timeout`, `max_redirects: 0`, and (with cURL) `CURLOPT_CONNECTTIMEOUT` to `connect_timeout`. A timeout surfaces as `GraphApiException::transportFailure()` (HTTP status `0`); the token is never logged.
+
+Layer the deadlines so the innermost fires first (REQ-RUNTIME-001):
+
+| Layer | Example | Rule |
+|-------|---------|------|
+| Profile `timeout` / `connect_timeout` | `10.0` / `5.0` | Fires first |
+| PHP `max_execution_time` / `max_input_time` | `30` | Strictly **greater** than `timeout` |
+| Reverse proxy / Caddy `servers.timeouts.write` | `35s` | Strictly **greater** than PHP |
+| FrankenPHP `max_wait_time` (worker or classic) | `15s` | Caps the wait for a free PHP thread (504 instead of an endless queue) |
+
+Under FrankenPHP (worker mode in particular) a hung Graph call would otherwise pin a PHP thread. When raising `timeout`, raise PHP and the HTTP write deadline in the same change. For bulk sends, route `SendOutgoingMessage` to an async Messenger transport ([USAGE.md](USAGE.md#messenger)) so web threads never wait on Graph. The demo Caddyfiles are a working example ([DEMO-FRANKENPHP.md](DEMO-FRANKENPHP.md#timeouts-req-runtime-001)).
 
 ## Webhooks
 
@@ -60,6 +71,8 @@ Keep PHP `max_execution_time` and reverse-proxy write timeouts **greater** than 
 - `POST /whatsapp/webhook` — inbound messages and statuses
 - `…/whatsapp/webhook/{profile}` — same, for a named profile
 
-Production: set `app_secret` and `allow_unsigned_webhooks: false`.
+Production: set `app_secret` and `allow_unsigned_webhooks: false`. The container refuses to compile when a profile has `allow_unsigned_webhooks: true` without `app_secret` unless `kernel.debug` is true, and always in the `prod` environment (fail closed: staging / preprod kernels without debug are refused too). The value must be a literal boolean; `%env()%` is rejected so a runtime variable cannot bypass the check.
+
+Routes are declared with `#[Route]` attributes on `WebhookController` (REQ-SF-004); `@WhatsappBusinessBundle/Resources/config/routing.yaml` is a thin attribute import kept for backward compatibility (route names `nowo_whatsapp_business_webhook` and `nowo_whatsapp_business_webhook_profile` are unchanged). The routes are opt-in: the controller service is not autoconfigured, so a Symfony 7.3+ host `controllers: { resource: routing.controllers }` import does not expose the webhook unless you import the bundle routing.
 
 Media downloads (`downloadMedia`) only follow HTTPS URLs on Meta hosts (`*.facebook.com`, `*.fbsbx.com`, `*.fbcdn.net`, …) or the host of `graph_base_uri`. Query strings on dumped media URLs are redacted. Media ids passed to `downloadMedia()` must match `^[0-9A-Za-z_-]+$` (otherwise `InvalidMediaIdException`); HTTP errors and non-JSON Graph responses are reported as `GraphApiException`.

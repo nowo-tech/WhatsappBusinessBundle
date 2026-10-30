@@ -1,0 +1,3 @@
+# Default Symfony >= 7.3 host config/routes.yaml: every service tagged routing.controller.
+controllers:
+    resource: routing.controllers

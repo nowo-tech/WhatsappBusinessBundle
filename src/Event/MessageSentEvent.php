@@ -16,6 +16,9 @@ use Symfony\Contracts\EventDispatcher\Event;
  */
 final class MessageSentEvent extends Event
 {
+    /**
+     * Creates the event for an outbound message accepted by the Cloud API.
+     */
     public function __construct(
         public readonly string $profile,
         public readonly OutgoingEnvelope $envelope,

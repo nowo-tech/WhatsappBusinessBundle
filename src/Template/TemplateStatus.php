@@ -19,6 +19,9 @@ enum TemplateStatus: string
     case Disabled = 'DISABLED';
     case Unknown  = 'UNKNOWN';
 
+    /**
+     * Maps a Graph template status (case-insensitive) to the enum; unknown values map to Unknown.
+     */
     public static function fromGraph(string $value): self
     {
         return self::tryFrom(strtoupper($value)) ?? self::Unknown;

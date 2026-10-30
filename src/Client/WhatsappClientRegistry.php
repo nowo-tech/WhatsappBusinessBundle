@@ -17,6 +17,8 @@ use function array_keys;
 final readonly class WhatsappClientRegistry implements WhatsappClientRegistryInterface
 {
     /**
+     * Creates the registry; the default profile must be one of the clients.
+     *
      * @param array<string, WhatsappClientInterface> $clients
      */
     public function __construct(
@@ -28,6 +30,9 @@ final readonly class WhatsappClientRegistry implements WhatsappClientRegistryInt
         }
     }
 
+    /**
+     * Returns the client of the given profile, or of the default profile when null.
+     */
     public function get(?string $profile = null): WhatsappClientInterface
     {
         $name = $profile ?? $this->defaultProfile;
@@ -38,11 +43,17 @@ final readonly class WhatsappClientRegistry implements WhatsappClientRegistryInt
         return $this->clients[$name];
     }
 
+    /**
+     * Tells whether a profile with this name is configured.
+     */
     public function has(string $profile): bool
     {
         return isset($this->clients[$profile]);
     }
 
+    /**
+     * Returns the configured profile names.
+     */
     public function names(): array
     {
         return array_keys($this->clients);

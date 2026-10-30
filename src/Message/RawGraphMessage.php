@@ -15,6 +15,8 @@ use function is_string;
 final readonly class RawGraphMessage implements OutgoingMessage
 {
     /**
+     * Creates a message from a Graph type and its type-specific fields.
+     *
      * @param array<string, mixed> $fields
      */
     public function __construct(
@@ -24,6 +26,8 @@ final readonly class RawGraphMessage implements OutgoingMessage
     }
 
     /**
+     * Creates a message from a full Graph body, dropping transport fields (`to`, `type`, `messaging_product`).
+     *
      * @param array<string, mixed> $graphBody
      */
     public static function fromGraphBody(array $graphBody): self
@@ -35,11 +39,17 @@ final readonly class RawGraphMessage implements OutgoingMessage
         return new self($type, $graphBody);
     }
 
+    /**
+     * Returns the Graph message type of this payload.
+     */
     public function type(): MessageType
     {
         return $this->messageType;
     }
 
+    /**
+     * Returns the host-supplied Graph fields for this type.
+     */
     public function graphFields(): array
     {
         return $this->fields;
