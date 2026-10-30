@@ -61,9 +61,11 @@ test-coverage: ensure-up
 cache-clear: ensure-up
 	$(COMPOSE) exec php php bin/console cache:clear
 
+# REQ-DEMO-007: pick up bundle changes (path repository) — update the package, refresh autoload, clear cache.
 update-bundle: ensure-up
-	$(COMPOSE) exec php composer update nowo-tech/whatsapp-business-bundle --no-interaction
-	$(COMPOSE) exec php php bin/console cache:clear
+	$(COMPOSE) exec -T php composer update nowo-tech/whatsapp-business-bundle --no-interaction
+	$(COMPOSE) exec -T php composer dump-autoload
+	$(COMPOSE) exec -T php php bin/console cache:clear --env=dev --no-warmup
 	@echo "Bundle updated."
 
 verify:

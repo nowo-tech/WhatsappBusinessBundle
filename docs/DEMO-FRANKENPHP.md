@@ -39,7 +39,16 @@ See `docker/entrypoint.sh` and `docker/frankenphp/Caddyfile` / `Caddyfile.dev`.
 
 ## Timeouts (REQ-RUNTIME-001)
 
-Demo profile defaults: `timeout: 10`, `connect_timeout: 5`. Keep PHP `max_execution_time` and Caddy write timeouts **greater** than the profile timeout. Documented in [CONFIGURATION.md](CONFIGURATION.md).
+Both demo Caddyfiles (`docker/frankenphp/Caddyfile` for worker mode, `Caddyfile.dev` for classic mode) configure the full hierarchy, innermost first:
+
+| Layer | Demo value | Where | Role |
+|-------|-----------|-------|------|
+| Graph call (`timeout` → HttpClient `timeout` + `max_duration`; `connect_timeout` → cURL connect) | 10 s / 5 s | profile config (`nowo_whatsapp_business.yaml`) | Fires first; `GraphApiException::transportFailure()` |
+| PHP `max_execution_time` / `max_input_time` | 30 s | Caddyfile `frankenphp { php_ini … }` | Strictly greater than the Graph timeout |
+| Caddy `servers.timeouts.write` | 35 s | Caddyfile global `servers { timeouts { write } }` | Strictly greater than PHP |
+| FrankenPHP `max_wait_time` | 15 s | Caddyfile `frankenphp { max_wait_time }` | Caps the wait for a free PHP thread (then 504) so stalled Graph calls cannot grow an endless queue |
+
+When you raise the profile `timeout`, raise PHP, the Caddy write timeout and (if needed) `max_wait_time` in the same change. The Caddyfiles also cap request bodies (`request_body { max_size 1MB }`): PHP never reads more than 1 MB of a webhook POST, and a truncated signed body fails the HMAC check (403). Host guidance: [CONFIGURATION.md](CONFIGURATION.md#timeouts-req-runtime-001).
 
 ## Run
 
