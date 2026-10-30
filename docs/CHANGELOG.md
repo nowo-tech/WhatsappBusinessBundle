@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+Independent REQ-SEC-004 audit (Appendix BU, 2026-10-30): **Pass (good) / Low**. Fixes:
+
+- **L1 (affects >= 1.0.0, < 1.3.0):** the Cloud API access token appeared in exception trace arguments (`GraphApiClient::request()` wrote `Authorization: Bearer` into its own `$options` parameter), so `FlattenException` (debug page, profiler exception panel) and error trackers that send frame arguments could store it when `zend.exception_ignore_args=Off`. The header is now built in a local copy; a regression test checks `FlattenException` / `getTrace()`.
+- **L2 (affects >= 1.0.0, < 1.3.0, dev only):** the Symfony profiler HttpClient panel records request headers (including the bearer token). This cannot be redacted from the bundle; `docs/SECURITY.md` no longer claims the profiler is covered and documents the residual and host guidance.
+- **L3:** `allow_unsigned_webhooks` is now forced to `false` at compile time unless `kernel.debug` is true and the environment is not `prod`, so an `%env()%` `app_secret` that is empty at runtime still rejects unsigned POSTs.
+- **L4:** a signed webhook whose `metadata.phone_number_id` does not match the profile is rejected (403) and dispatches no event.
+- Hardening: `X-Hub-Signature-256` must use the `sha256=` prefix; unknown profiles answer like a bad token / signature (403, no enumeration); the zero-config profile no longer ships the `demo-verify` verify token; permanent Graph 4xx (except 429) and unknown profiles are `UnrecoverableMessageHandlingException` in the Messenger handler (no retries); `logger` is injected with `IGNORE_ON_INVALID_REFERENCE` (no `TypeError` in containers without a logger).
 - The container refuses to compile when a profile sets `allow_unsigned_webhooks: true` without `app_secret` unless `kernel.debug` is true (and always in `prod`), so staging / preprod kernels without debug fail closed too; a copied dev config would otherwise accept forged webhooks on a public endpoint. `allow_unsigned_webhooks` must be a literal boolean (`%env()%` is rejected).
 - `docs/SECURITY.md`: the release security checklist (12.4.1) now covers all REQ-SEC-002 items (SECURITY docs, `.env`, secrets, recipe, input/output, `composer audit`, logs, crypto, exposure, limits/DoS) plus the REQ-SEC-004 audit row; threat model lists oversized webhook bodies and the unsigned-webhook guard.
 

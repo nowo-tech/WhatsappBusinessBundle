@@ -47,7 +47,11 @@ final class WebhookVerifier
             throw WebhookVerificationException::missingSignature();
         }
 
-        $provided = str_starts_with($header, 'sha256=') ? substr($header, 7) : $header;
+        // Meta always sends "sha256=<hex>"; a bare digest is rejected.
+        if (!str_starts_with($header, 'sha256=')) {
+            throw WebhookVerificationException::invalidSignature();
+        }
+        $provided = substr($header, 7);
         $expected = hash_hmac('sha256', $rawBody, $secret);
         if (!hash_equals($expected, $provided)) {
             throw WebhookVerificationException::invalidSignature();
