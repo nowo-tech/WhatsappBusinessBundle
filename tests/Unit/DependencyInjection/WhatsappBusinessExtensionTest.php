@@ -111,18 +111,18 @@ final class WhatsappBusinessExtensionTest extends TestCase
                     'allow_unsigned_webhooks' => true,
                 ],
             ],
-        ]], self::kernelContainer($environment, $debug));
+        ]], $this->kernelContainer($environment, $debug));
     }
 
     public function testUnsignedWebhooksStayAllowedInDebugOrWithAppSecret(): void
     {
-        $dev = self::kernelContainer('dev', true);
+        $dev = $this->kernelContainer('dev', true);
         (new WhatsappBusinessExtension())->load([[
             'profiles' => ['default' => ['phone_number_id' => '111', 'access_token' => 'REDACTED-TEST', 'allow_unsigned_webhooks' => true]],
         ]], $dev);
         self::assertTrue($dev->hasDefinition('nowo_whatsapp_business.profile.default'));
 
-        $prod = self::kernelContainer('prod', false);
+        $prod = $this->kernelContainer('prod', false);
         (new WhatsappBusinessExtension())->load([[
             'profiles' => ['default' => [
                 'phone_number_id'         => '111',
@@ -136,7 +136,7 @@ final class WhatsappBusinessExtensionTest extends TestCase
 
     public function testAllowUnsignedWebhooksMustBeALiteralBoolean(): void
     {
-        $container = self::kernelContainer('prod', false);
+        $container = $this->kernelContainer('prod', false);
         $container->registerExtension(new WhatsappBusinessExtension());
         $placeholder = $container->getParameterBag()->get('env(bool:WHATSAPP_ALLOW_UNSIGNED)');
         self::assertIsString($placeholder);
@@ -154,7 +154,7 @@ final class WhatsappBusinessExtensionTest extends TestCase
         (new MergeExtensionConfigurationPass())->process($container);
     }
 
-    private static function kernelContainer(string $environment, bool $debug): ContainerBuilder
+    private function kernelContainer(string $environment, bool $debug): ContainerBuilder
     {
         $container = new ContainerBuilder();
         $container->setParameter('kernel.environment', $environment);
