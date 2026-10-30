@@ -16,6 +16,7 @@ use Nowo\WhatsappBusinessBundle\Transport\CloudApiTransport;
 use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 #[CoversClass(WhatsappBusinessExtension::class)]
@@ -81,5 +82,46 @@ final class WhatsappBusinessExtensionTest extends TestCase
                 ],
             ],
         ]], new ContainerBuilder());
+    }
+
+    public function testUnsignedWebhooksWithoutAppSecretAreRefusedInProd(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', 'prod');
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('profiles.public.allow_unsigned_webhooks');
+        (new WhatsappBusinessExtension())->load([[
+            'default_profile' => 'public',
+            'profiles'        => [
+                'public' => [
+                    'phone_number_id'         => '111',
+                    'access_token'            => 'REDACTED-TEST',
+                    'allow_unsigned_webhooks' => true,
+                ],
+            ],
+        ]], $container);
+    }
+
+    public function testUnsignedWebhooksStayAllowedOutsideProdOrWithAppSecret(): void
+    {
+        $dev = new ContainerBuilder();
+        $dev->setParameter('kernel.environment', 'dev');
+        (new WhatsappBusinessExtension())->load([[
+            'profiles' => ['default' => ['phone_number_id' => '111', 'access_token' => 'REDACTED-TEST', 'allow_unsigned_webhooks' => true]],
+        ]], $dev);
+        self::assertTrue($dev->hasDefinition('nowo_whatsapp_business.profile.default'));
+
+        $prod = new ContainerBuilder();
+        $prod->setParameter('kernel.environment', 'prod');
+        (new WhatsappBusinessExtension())->load([[
+            'profiles' => ['default' => [
+                'phone_number_id'         => '111',
+                'access_token'            => 'REDACTED-TEST',
+                'app_secret'              => 'REDACTED-TEST',
+                'allow_unsigned_webhooks' => true,
+            ]],
+        ]], $prod);
+        self::assertTrue($prod->hasDefinition('nowo_whatsapp_business.profile.default'));
     }
 }
