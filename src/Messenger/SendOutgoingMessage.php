@@ -14,6 +14,9 @@ use Nowo\WhatsappBusinessBundle\Message\OutgoingEnvelope;
  */
 final readonly class SendOutgoingMessage
 {
+    /**
+     * Creates the message for an envelope and an optional profile name (default profile when null).
+     */
     public function __construct(
         public OutgoingEnvelope $envelope,
         public ?string $profile = null,

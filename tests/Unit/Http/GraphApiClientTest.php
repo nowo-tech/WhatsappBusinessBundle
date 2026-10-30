@@ -18,6 +18,10 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
+use function extension_loaded;
+
+use const CURLOPT_CONNECTTIMEOUT;
+
 #[CoversClass(GraphApiClient::class)]
 #[CoversClass(GraphApiException::class)]
 final class GraphApiClientTest extends TestCase
@@ -151,5 +155,42 @@ final class GraphApiClientTest extends TestCase
         $ref    = new ReflectionMethod($client, 'request');
         $result = $ref->invoke($client, 'GET', 'x', ['headers' => 'nope']);
         self::assertSame(['ok' => 1], $result);
+    }
+
+    /**
+     * REQ-RUNTIME-001: every Graph call carries the profile deadlines and a timeout surfaces as a transport failure.
+     */
+    public function testRequestsCarryProfileTimeoutsAndIdleTimeoutIsATransportFailure(): void
+    {
+        $seen = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seen): ResponseInterface {
+            $seen[] = $options;
+
+            // An empty chunk makes MockResponse report an idle timeout while reading the body.
+            return new MockResponse(['']);
+        });
+        $client = new GraphApiClient($http, ProfileFactory::cloud());
+
+        foreach ([
+            static fn (): array => $client->get('x'),
+            static fn (): string => $client->downloadRaw('https://graph.facebook.com/v21.0/file'),
+        ] as $call) {
+            try {
+                $call();
+                self::fail('GraphApiException expected on timeout.');
+            } catch (GraphApiException $exception) {
+                self::assertSame(0, $exception->httpStatus);
+            }
+        }
+
+        self::assertCount(2, $seen);
+        foreach ($seen as $options) {
+            self::assertSame(10.0, $options['timeout']);
+            self::assertSame(10.0, $options['max_duration']);
+            self::assertSame(0, $options['max_redirects']);
+        }
+        if (extension_loaded('curl')) {
+            self::assertSame(5, $seen[0]['extra']['curl'][CURLOPT_CONNECTTIMEOUT]);
+        }
     }
 }

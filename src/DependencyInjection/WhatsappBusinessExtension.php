@@ -15,6 +15,7 @@ use Nowo\WhatsappBusinessBundle\Exception\UnknownProfileException;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiClient;
 use Nowo\WhatsappBusinessBundle\Transport\CloudApiTransport;
 use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
@@ -29,6 +30,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use function array_keys;
 use function class_exists;
 use function interface_exists;
+use function is_bool;
 use function sprintf;
 
 /**
@@ -40,6 +42,8 @@ use function sprintf;
 final class WhatsappBusinessExtension extends Extension
 {
     /**
+     * Loads the bundle services and registers one profile, transport and client per configured profile.
+     *
      * @param array<int, array<string, mixed>> $configs
      */
     public function load(array $configs, ContainerBuilder $container): void
@@ -61,8 +65,13 @@ final class WhatsappBusinessExtension extends Extension
             throw UnknownProfileException::forProfile($defaultProfile);
         }
 
+        $environment = $container->hasParameter('kernel.environment') ? $container->getParameter('kernel.environment') : null;
+        $debug       = $container->hasParameter('kernel.debug') ? $container->getParameter('kernel.debug') : null;
+
         $clientRefs = [];
         foreach ($config['profiles'] as $name => $profileConfig) {
+            $this->assertUnsignedWebhooksAllowed((string) $name, $profileConfig, $environment, $debug);
+
             $clientRefs[(string) $name] = new Reference($this->registerProfile($container, (string) $name, $profileConfig));
         }
 
@@ -98,6 +107,29 @@ final class WhatsappBusinessExtension extends Extension
 
         $container->setParameter('nowo_whatsapp_business.default_profile', $defaultProfile);
         $container->setParameter('nowo_whatsapp_business.profiles', array_keys($config['profiles']));
+    }
+
+    /**
+     * Fails closed on unsigned webhooks (no HMAC) outside debug kernels.
+     *
+     * `allow_unsigned_webhooks` must be a literal boolean (an `%env()%` placeholder could turn truthy at
+     * runtime and bypass this compile-time check). When it is true and `app_secret` is empty, the container
+     * is refused unless `kernel.debug` is true, and always in the `prod` environment.
+     *
+     * @param array<string, mixed> $profileConfig
+     */
+    private function assertUnsignedWebhooksAllowed(string $name, array $profileConfig, mixed $environment, mixed $debug): void
+    {
+        $allowUnsigned = $profileConfig['allow_unsigned_webhooks'];
+        if (!is_bool($allowUnsigned)) {
+            throw new InvalidConfigurationException(sprintf('nowo_whatsapp_business.profiles.%s.allow_unsigned_webhooks must be a literal boolean (environment variables are not allowed).', $name));
+        }
+        if (!$allowUnsigned || ($profileConfig['app_secret'] ?? '') !== '') {
+            return;
+        }
+        if ($environment === 'prod' || $debug === false) {
+            throw new InvalidConfigurationException(sprintf('nowo_whatsapp_business.profiles.%s.allow_unsigned_webhooks cannot be true without app_secret unless kernel.debug is true (never in "prod"): set app_secret so webhooks are HMAC-verified.', $name));
+        }
     }
 
     /**
@@ -175,6 +207,9 @@ final class WhatsappBusinessExtension extends Extension
         return $clientId;
     }
 
+    /**
+     * Returns the configuration alias (nowo_whatsapp_business).
+     */
     public function getAlias(): string
     {
         return 'nowo_whatsapp_business';

@@ -1,0 +1,3 @@
+# Host-style import used by the Flex recipe and docs/INSTALLATION.md.
+nowo_whatsapp_business:
+    resource: '@WhatsappBusinessBundle/Resources/config/routing.yaml'

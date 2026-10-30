@@ -34,6 +34,9 @@ use const PHP_URL_HOST;
  */
 final readonly class GraphApiClient
 {
+    /**
+     * Creates the Graph client for one profile; every request uses the profile timeouts.
+     */
     public function __construct(
         private HttpClientInterface $httpClient,
         private CloudApiProfile $profile,
@@ -42,6 +45,8 @@ final readonly class GraphApiClient
     }
 
     /**
+     * Posts a JSON body to a Graph path and returns the decoded response.
+     *
      * @param array<string, mixed> $json
      *
      * @return array<string, mixed>
@@ -54,6 +59,8 @@ final readonly class GraphApiClient
     }
 
     /**
+     * Sends a GET to a Graph path with query parameters and returns the decoded response.
+     *
      * @param array<string, scalar|null> $query
      *
      * @return array<string, mixed>
@@ -66,6 +73,8 @@ final readonly class GraphApiClient
     }
 
     /**
+     * Sends a DELETE to a Graph path and returns the decoded response.
+     *
      * @return array<string, mixed>
      */
     public function delete(string $path): array
@@ -74,6 +83,8 @@ final readonly class GraphApiClient
     }
 
     /**
+     * Uploads a local file as multipart form data to a Graph path and returns the decoded response.
+     *
      * @return array<string, mixed>
      */
     public function postMedia(string $path, string $filePath, string $mimeType): array
@@ -90,6 +101,9 @@ final readonly class GraphApiClient
         ]);
     }
 
+    /**
+     * Downloads a media URL (allow-listed Meta hosts only, no redirects, profile timeout) and returns the bytes.
+     */
     public function downloadRaw(string $url): string
     {
         if (!MediaDownloadUrlPolicy::isAllowed($url, $this->profile->graphBaseUri)) {

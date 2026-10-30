@@ -1,11 +1,32 @@
 {
 	order mercure after encode
 	skip_install_trust
+	# Timeout hierarchy (REQ-RUNTIME-001), innermost first:
+	#   profile timeout 10s (Graph HttpClient max_duration, config/packages/nowo_whatsapp_business.yaml)
+	#   < PHP max_execution_time / max_input_time 30s
+	#   < Caddy servers.timeouts.write 35s.
+	# max_wait_time caps how long a request waits for a free PHP thread (then 504) so a stalled
+	# Graph API cannot grow an endless queue. Raise every layer together.
+	servers {
+		timeouts {
+			write 35s
+		}
+	}
+	frankenphp {
+		php_ini max_execution_time 30
+		php_ini max_input_time 30
+		max_wait_time 15s
+	}
 }
 
 :80 {
 	root * /app/public
 	encode zstd br gzip
+	# Webhook DoS guard: Meta notifications are a few KB; PHP can read at most 1 MB of any body
+	# (a truncated signed webhook then fails the HMAC check with 403).
+	request_body {
+		max_size 1MB
+	}
 	mercure {
 		anonymous
 	}

@@ -17,12 +17,18 @@ use Symfony\Component\HttpKernel\Bundle\Bundle;
  */
 final class WhatsappBusinessBundle extends Bundle
 {
+    /**
+     * Registers the VarDumper casters that keep Cloud API secrets out of dumps.
+     */
     public function boot(): void
     {
         parent::boot();
         SensitiveDumpRegistrar::register();
     }
 
+    /**
+     * Returns the bundle extension (nowo_whatsapp_business alias).
+     */
     public function getContainerExtension(): ExtensionInterface
     {
         if (!$this->extension instanceof WhatsappBusinessExtension) {

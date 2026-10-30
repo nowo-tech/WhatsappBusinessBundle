@@ -15,6 +15,9 @@ use Symfony\Contracts\EventDispatcher\Event;
  */
 final class WebhookReceivedEvent extends Event
 {
+    /**
+     * Creates the event for a verified webhook notification (all messages and statuses).
+     */
     public function __construct(
         public readonly string $profile,
         public readonly WebhookNotification $notification,

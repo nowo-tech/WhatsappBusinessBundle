@@ -118,4 +118,6 @@ return (new Config())
         (new Finder())
             ->in(__DIR__)
             ->exclude(['vendor', 'var', 'coverage', '.phpunit.cache'])
+            // Generated, git-ignored dumps such as demo config/reference.php stay out of CS (REQ-CS-001 exception).
+            ->ignoreVCSIgnored(true)
     );

@@ -22,6 +22,9 @@ use function is_string;
 #[AsCommand(name: 'whatsapp:templates', description: 'List WhatsApp message templates for a profile')]
 final class ListTemplatesCommand extends Command
 {
+    /**
+     * Creates the command with the profile registry.
+     */
     public function __construct(
         private readonly WhatsappClientRegistryInterface $registry,
     ) {

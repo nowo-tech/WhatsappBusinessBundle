@@ -1,13 +1,6 @@
-nowo_whatsapp_business_webhook:
-    path: /whatsapp/webhook
-    controller: Nowo\WhatsappBusinessBundle\Webhook\WebhookController
-    methods: [GET, POST]
-    defaults:
-        profile: null
-
-nowo_whatsapp_business_webhook_profile:
-    path: /whatsapp/webhook/{profile}
-    controller: Nowo\WhatsappBusinessBundle\Webhook\WebhookController
-    methods: [GET, POST]
-    requirements:
-        profile: '[a-zA-Z0-9_-]+'
+# Thin import of the attribute routes declared on WebhookController (REQ-SF-004).
+# Kept for backward compatibility: hosts and the Flex recipe import this file;
+# route names and paths are unchanged (nowo_whatsapp_business_webhook[_profile]).
+nowo_whatsapp_business_webhook_routes:
+    resource: '../../Webhook/WebhookController.php'
+    type: attribute

@@ -12,8 +12,9 @@ parameters:
         - vendor/*
     reportUnmatchedIgnoredErrors: false
     treatPhpDocTypesAsCertain: false
+    # REQ-CS-006: never silence findings — fix the code instead (no baseline file).
+    ignoreErrors: []
 
 includes:
   - vendor/nowo-tech/phpstan-frankenphp/ruleset-classic.neon
   - vendor/nowo-tech/phpstan-frankenphp/ruleset-worker.neon
-  - phpstan-baseline.neon

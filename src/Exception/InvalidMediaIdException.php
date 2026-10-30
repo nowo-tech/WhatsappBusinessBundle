@@ -12,6 +12,9 @@ namespace Nowo\WhatsappBusinessBundle\Exception;
  */
 final class InvalidMediaIdException extends WhatsappBusinessException
 {
+    /**
+     * Creates the exception for a media id outside ^[0-9A-Za-z_-]+$.
+     */
     public static function invalid(): self
     {
         return new self('Media id must match ^[0-9A-Za-z_-]+$.');

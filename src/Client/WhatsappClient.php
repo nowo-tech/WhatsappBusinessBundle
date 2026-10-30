@@ -32,6 +32,9 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  */
 final readonly class WhatsappClient implements WhatsappClientInterface
 {
+    /**
+     * Creates the client for one profile on top of its transport, optional event dispatcher and logger.
+     */
     public function __construct(
         private CloudApiProfile $profile,
         private TransportInterface $transport,
@@ -40,11 +43,17 @@ final readonly class WhatsappClient implements WhatsappClientInterface
     ) {
     }
 
+    /**
+     * Returns the Cloud API profile this client sends with.
+     */
     public function profile(): CloudApiProfile
     {
         return $this->profile;
     }
 
+    /**
+     * Sends a prepared envelope, dispatches MessageSentEvent / MessageSendFailedEvent and logs a redacted summary.
+     */
     public function send(OutgoingEnvelope $envelope): MessageResult
     {
         $body = $envelope->toGraphBody();
@@ -75,26 +84,41 @@ final readonly class WhatsappClient implements WhatsappClientInterface
         return $result;
     }
 
+    /**
+     * Parses the recipient phone number and sends a typed outbound message.
+     */
     public function sendMessage(string $to, OutgoingMessage $message): MessageResult
     {
         return $this->send(new OutgoingEnvelope(PhoneNumber::parse($to), $message));
     }
 
+    /**
+     * Sends a plain-text message, optionally with link previews.
+     */
     public function sendText(string $to, string $body, bool $previewUrl = false): MessageResult
     {
         return $this->sendMessage($to, new TextMessage($body, $previewUrl));
     }
 
+    /**
+     * Sends an approved message template with positional body parameters.
+     */
     public function sendTemplate(string $to, string $name, string $language, array $bodyParameters = []): MessageResult
     {
         return $this->sendMessage($to, new TemplateMessage($name, $language, $bodyParameters));
     }
 
+    /**
+     * Sends an image (uploaded media id or https link) with an optional caption.
+     */
     public function sendImage(string $to, MediaSource $source, ?string $caption = null): MessageResult
     {
         return $this->sendMessage($to, MediaMessage::image($source, $caption));
     }
 
+    /**
+     * Sends host-built Graph JSON; transport fields (`to`, `type`, `messaging_product`) are normalised.
+     */
     public function sendRaw(string $to, array $graphBody): MessageResult
     {
         $phone    = PhoneNumber::parse($to);
@@ -103,21 +127,33 @@ final readonly class WhatsappClient implements WhatsappClientInterface
         return $this->send($envelope);
     }
 
+    /**
+     * Marks an inbound message as read.
+     */
     public function markAsRead(string $messageId): void
     {
         $this->transport->markAsRead($messageId);
     }
 
+    /**
+     * Uploads a local file to the Cloud API media endpoint and returns its media id.
+     */
     public function uploadMedia(string $filePath, string $mimeType): MediaId
     {
         return $this->transport->uploadMedia($filePath, $mimeType);
     }
 
+    /**
+     * Downloads media by id (Graph lookup + allow-listed URL download).
+     */
     public function downloadMedia(string $mediaId): MediaDownload
     {
         return $this->transport->downloadMedia($mediaId);
     }
 
+    /**
+     * Lists the message templates of the profile WhatsApp Business Account.
+     */
     public function listTemplates(): array
     {
         return $this->transport->listTemplates();

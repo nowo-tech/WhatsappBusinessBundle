@@ -15,6 +15,9 @@ use Symfony\Contracts\EventDispatcher\Event;
  */
 final class IncomingMessageEvent extends Event
 {
+    /**
+     * Creates the event for one inbound message received on a profile webhook.
+     */
     public function __construct(
         public readonly string $profile,
         public readonly IncomingMessage $message,

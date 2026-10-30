@@ -32,6 +32,9 @@ final class MediaDownloadUrlPolicy
         'cdninstagram.com',
     ];
 
+    /**
+     * Tells whether a media URL is https, has no userinfo and targets a Meta host or the configured Graph host.
+     */
     public static function isAllowed(string $url, string $graphBaseUri): bool
     {
         $parts = parse_url($url);

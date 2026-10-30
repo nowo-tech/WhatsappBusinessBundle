@@ -25,6 +25,9 @@ use function method_exists;
  */
 final class SensitiveDumpRegistrar
 {
+    /**
+     * Registers the VarDumper casters for every class that carries secrets (idempotent).
+     */
     public static function register(): void
     {
         // var-dumper is optional (pulled by Symfony error-handler in full apps).
@@ -50,6 +53,8 @@ final class SensitiveDumpRegistrar
     }
 
     /**
+     * VarDumper caster that dumps an object through its redacting __debugInfo().
+     *
      * @param array<string, mixed> $a
      *
      * @return array<string, mixed>

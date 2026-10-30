@@ -23,17 +23,26 @@ use function preg_match;
  */
 final readonly class CloudApiTransport implements TransportInterface
 {
+    /**
+     * Creates the live transport for one profile on top of its Graph client.
+     */
     public function __construct(
         private GraphApiClient $graph,
         private CloudApiProfile $profile,
     ) {
     }
 
+    /**
+     * Posts the message body to the Graph messages endpoint.
+     */
     public function send(array $graphBody): array
     {
         return $this->graph->postJson($this->profile->messagesPath(), $graphBody);
     }
 
+    /**
+     * Marks an inbound message as read through the Graph messages endpoint.
+     */
     public function markAsRead(string $messageId): void
     {
         $this->graph->postJson($this->profile->messagesPath(), [
@@ -43,6 +52,9 @@ final readonly class CloudApiTransport implements TransportInterface
         ]);
     }
 
+    /**
+     * Uploads a local file to the Graph media endpoint.
+     */
     public function uploadMedia(string $filePath, string $mimeType): MediaId
     {
         $payload = $this->graph->postMedia($this->profile->mediaPath(), $filePath, $mimeType);
@@ -51,6 +63,9 @@ final readonly class CloudApiTransport implements TransportInterface
         return new MediaId($id, $payload);
     }
 
+    /**
+     * Resolves the media URL by id (validated id), then downloads it through the allow-list.
+     */
     public function downloadMedia(string $mediaId): MediaDownload
     {
         // The id becomes a Graph URL path segment: reject "/", "?", "..", "%2F", etc.
@@ -67,6 +82,9 @@ final readonly class CloudApiTransport implements TransportInterface
         return new MediaDownload($body, $mime, $url);
     }
 
+    /**
+     * Lists the message templates of the profile WABA.
+     */
     public function listTemplates(): array
     {
         $payload = $this->graph->get($this->profile->templatesPath());

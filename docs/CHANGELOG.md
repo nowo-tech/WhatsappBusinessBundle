@@ -21,8 +21,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- The container refuses to compile when a profile sets `allow_unsigned_webhooks: true` without `app_secret` unless `kernel.debug` is true (and always in `prod`), so staging / preprod kernels without debug fail closed too; a copied dev config would otherwise accept forged webhooks on a public endpoint. `allow_unsigned_webhooks` must be a literal boolean (`%env()%` is rejected).
+- `docs/SECURITY.md`: the release security checklist (12.4.1) now covers all REQ-SEC-002 items (SECURITY docs, `.env`, secrets, recipe, input/output, `composer audit`, logs, crypto, exposure, limits/DoS) plus the REQ-SEC-004 audit row; threat model lists oversized webhook bodies and the unsigned-webhook guard.
+
 ### Changed
 
+- Dependencies: `symfony/mime` lock bumped (bundle 7.4.22, demo 8.1.10) for CVE-2026-45070 so `composer audit --locked` is clean.
+- Webhook routes are declared with `#[Route]` attributes on `WebhookController` (REQ-SF-004). `Resources/config/routing.yaml` is now a thin attribute import kept for backward compatibility; route names, paths, methods and requirements are unchanged. The controller is registered explicitly with `autoconfigure: false` (no `#[AsController]`), so on Symfony 7.3+ the host `routing.controllers` import never exposes the webhook: the routes stay opt-in.
+- `SendOutgoingMessageHandler` is registered with `#[AsMessageHandler]` instead of an explicit `messenger.message_handler` tag (REQ-MSG-001); USAGE documents transport expectations, retries, failure transport, idempotency and logging.
+- PHPDoc with an English description on every public method in `src/` (REQ-CS-001).
+- PHPStan: the empty `phpstan-baseline.neon` is removed; `phpstan.neon.dist` states `ignoreErrors: []` (REQ-CS-006).
+- Coverage: `make coverage-check` / `make test-coverage-100` targets (REQ-TEST-006); `make test-coverage` and the CI coverage step now fail below 100% line coverage (REQ-TEST-003).
+- Demo: `make -C demo release-check` runs `update-bundle` first (composer update + dump-autoload + `cache:clear`, REQ-DEMO-007); the DNS block in `docker-compose.yml` is commented (REQ-DEMO-009); both Caddyfiles set the timeout hierarchy (PHP `max_execution_time` / `max_input_time` 30 s, Caddy write 35 s, FrankenPHP `max_wait_time` 15 s) and a 1 MB request body cap (REQ-RUNTIME-001). CONFIGURATION / DEMO-FRANKENPHP / README document the hierarchy; a test covers Graph timeouts.
+- `docs/GITHUB_CI.md` records the local gate run used as CI evidence while GitHub Actions cannot run on this private repository (REQ-CI-003).
+- Cursor rules: removed the frontend TS/Vite rule (no frontend); Twig, tests and docs rules aligned with this repository (REQ-IDE-004).
 - Docs: USAGE states that host and demo forms are Symfony Form Types rendered with `form_start` / the `not child.rendered` child loop / `form_end`, and that raw `<form>` / `<input>` must not be reintroduced; `check-no-raw-html-form` enforces it in `release-check` (REQ-TWIG-005 rule 9).
 - Developer tooling: `make release-check` runs the full REQ-MAKE-002 chain in order (`ensure-up` first, then `check-no-cursor-coauthor`, `check-open-prs`, new `check-no-raw-html-form` (REQ-TWIG-005), `composer-sync`, `cs-fix`, `cs-check`, `rector-dry`, `phpstan`, `igor`, `test-coverage`, demo release-check).
 - Dependencies refreshed (Composer and pnpm/npm lock files of the bundle and its demos, campaign 2026-10-19).

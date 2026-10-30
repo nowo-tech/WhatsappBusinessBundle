@@ -12,6 +12,9 @@ namespace Nowo\WhatsappBusinessBundle\Message;
  */
 final readonly class OutgoingEnvelope
 {
+    /**
+     * Creates the envelope: recipient, message and optional reply context / callback data.
+     */
     public function __construct(
         public PhoneNumber $to,
         public OutgoingMessage $message,

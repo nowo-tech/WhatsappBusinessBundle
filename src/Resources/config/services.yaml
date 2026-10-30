@@ -6,5 +6,10 @@ services:
 
     Nowo\WhatsappBusinessBundle\Webhook\WebhookVerifier: ~
     Nowo\WhatsappBusinessBundle\Webhook\WebhookParser: ~
+    # Explicit wiring, no autoconfiguration: on Symfony >= 7.3 a #[Route] class is autoconfigured with the
+    # routing.controller tag, so a host `resource: routing.controllers` import would expose this public,
+    # unauthenticated endpoint without the host importing the bundle routes. Routes stay opt-in via routing.yaml.
     Nowo\WhatsappBusinessBundle\Webhook\WebhookController:
+        autoconfigure: false
+        public: true
         tags: ['controller.service_arguments']

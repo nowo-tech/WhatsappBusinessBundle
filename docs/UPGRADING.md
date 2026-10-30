@@ -17,6 +17,15 @@
 
 ## Unreleased
 
+```bash
+composer update nowo-tech/whatsapp-business-bundle
+```
+
+- **Unsigned-webhook guard:** the container no longer compiles when a profile has `allow_unsigned_webhooks: true` and an empty `app_secret` unless `kernel.debug` is true — and never in `prod`. Non-debug staging / preprod kernels are refused too. Set `app_secret` (recommended), keep `allow_unsigned_webhooks: true` under `when@dev:` only, or use `allow_unsigned_webhooks: '%kernel.debug%'` (a container parameter, resolved to a literal boolean — the demo does this).
+- **`allow_unsigned_webhooks` must be a literal `true` / `false`:** `%env(bool:…)%` values are rejected at compile time.
+- **Routes:** no change needed. `@WhatsappBusinessBundle/Resources/config/routing.yaml` keeps working (it now imports the controller `#[Route]` attributes); route names and paths are unchanged. You may import `@WhatsappBusinessBundle/Webhook/WebhookController.php` with `type: attribute` instead. The webhook is **not** picked up by `resource: routing.controllers` (Symfony 7.3+): import the bundle routing explicitly as before.
+- **Messenger:** the handler is registered with `#[AsMessageHandler]` (autoconfiguration). If you re-declared `SendOutgoingMessageHandler` in your own services with a `messenger.message_handler` tag, remove that tag so the message is not handled twice.
+
 ## To 1.2.2
 
 From **1.2.1** — security - media id check anchored at end of string.
