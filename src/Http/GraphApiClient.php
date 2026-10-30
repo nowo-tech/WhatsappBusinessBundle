@@ -154,23 +154,26 @@ final readonly class GraphApiClient
             ltrim($path, '/'),
         );
 
-        $options['timeout']       = $this->profile->timeout;
-        $options['max_duration']  = $this->profile->timeout;
-        $options['max_redirects'] = 0;
+        // The token is only ever written to the local $sent copy: PHP exception traces keep the current
+        // value of parameters (zend.exception_ignore_args=Off), so it must never land in $options.
+        $sent                  = $options;
+        $sent['timeout']       = $this->profile->timeout;
+        $sent['max_duration']  = $this->profile->timeout;
+        $sent['max_redirects'] = 0;
         if (extension_loaded('curl') && defined('CURLOPT_CONNECTTIMEOUT')) {
-            $options['extra']['curl'][CURLOPT_CONNECTTIMEOUT] = (int) ceil($this->profile->connectTimeout);
+            $sent['extra']['curl'][CURLOPT_CONNECTTIMEOUT] = (int) ceil($this->profile->connectTimeout);
         }
-        $headers = $options['headers'] ?? [];
+        $headers = $sent['headers'] ?? [];
         if (!is_array($headers)) {
             $headers = [];
         }
         $headers['Authorization'] = 'Bearer ' . $this->profile->accessToken;
         $headers['Accept']        = $headers['Accept'] ?? 'application/json';
-        $options['headers']       = $headers;
+        $sent['headers']          = $headers;
 
         $status = 0;
         try {
-            $response = $this->httpClient->request($method, $url, $options);
+            $response = $this->httpClient->request($method, $url, $sent);
             $status   = $response->getStatusCode();
             $payload  = $response->toArray(false);
         } catch (DecodingExceptionInterface) {

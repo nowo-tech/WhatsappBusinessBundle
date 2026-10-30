@@ -71,6 +71,11 @@ final class WhatsappBusinessExtension extends Extension
         $clientRefs = [];
         foreach ($config['profiles'] as $name => $profileConfig) {
             $this->assertUnsignedWebhooksAllowed((string) $name, $profileConfig, $environment, $debug);
+            // Effective flag decided at compile time, independent of app_secret: an %env()% secret that is
+            // empty at runtime must still fail closed outside debug kernels and always in prod.
+            $profileConfig['allow_unsigned_webhooks'] = $profileConfig['allow_unsigned_webhooks'] === true
+                && $debug === true
+                && $environment !== 'prod';
 
             $clientRefs[(string) $name] = new Reference($this->registerProfile($container, (string) $name, $profileConfig));
         }
@@ -162,7 +167,7 @@ final class WhatsappBusinessExtension extends Extension
             '$connectTimeout'            => (float) $profileConfig['connect_timeout'],
             '$appSecret'                 => $appSecret,
             '$webhookVerifyToken'        => $verifyToken,
-            '$allowUnsignedWebhooks'     => (bool) $profileConfig['allow_unsigned_webhooks'],
+            '$allowUnsignedWebhooks'     => $profileConfig['allow_unsigned_webhooks'] === true,
         ]);
         $profileId = sprintf('nowo_whatsapp_business.profile.%s', $name);
         $profileDef->setPublic(false);
@@ -178,7 +183,7 @@ final class WhatsappBusinessExtension extends Extension
             $graph = new Definition(GraphApiClient::class, [
                 '$httpClient' => new Reference('http_client'),
                 '$profile'    => new Reference($profileId),
-                '$logger'     => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+                '$logger'     => new Reference('logger', ContainerBuilder::IGNORE_ON_INVALID_REFERENCE),
             ]);
             $graphId = sprintf('nowo_whatsapp_business.graph.%s', $name);
             $graph->setPublic(false);
@@ -198,7 +203,7 @@ final class WhatsappBusinessExtension extends Extension
             '$profile'         => new Reference($profileId),
             '$transport'       => new Reference($transportId),
             '$eventDispatcher' => new Reference('event_dispatcher', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
-            '$logger'          => new Reference('logger', ContainerBuilder::NULL_ON_INVALID_REFERENCE),
+            '$logger'          => new Reference('logger', ContainerBuilder::IGNORE_ON_INVALID_REFERENCE),
         ]);
         $clientId = sprintf('nowo_whatsapp_business.client.%s', $name);
         $client->setPublic(false);

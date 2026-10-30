@@ -21,6 +21,12 @@
 composer update nowo-tech/whatsapp-business-bundle
 ```
 
+- **Webhook signature format:** `X-Hub-Signature-256` must be `sha256=<hex>` (what Meta sends). Custom tests or proxies sending a bare digest must add the prefix.
+- **Profile binding:** a signed POST whose `metadata.phone_number_id` differs from the profile `phone_number_id` now gets 403 and dispatches no event. Point each Meta phone number at its own `/whatsapp/webhook/{profile}` URL.
+- **Unknown profiles:** answer 403 (same body as a bad token / signature) instead of 404.
+- **Zero-config profile:** `webhook_verify_token` defaults to `null` (was `demo-verify`); set it explicitly if you relied on the default.
+- **Messenger:** Graph 4xx other than 429 and unknown profiles are thrown as `UnrecoverableMessageHandlingException` (original exception in `getPrevious()`): they are no longer retried. 429, 5xx and transport failures are still retried.
+- **Unsigned webhooks:** the effective `allow_unsigned_webhooks` is `false` unless `kernel.debug` is true and the environment is not `prod`, even when `app_secret` comes from an env var.
 - **Unsigned-webhook guard:** the container no longer compiles when a profile has `allow_unsigned_webhooks: true` and an empty `app_secret` unless `kernel.debug` is true — and never in `prod`. Non-debug staging / preprod kernels are refused too. Set `app_secret` (recommended), keep `allow_unsigned_webhooks: true` under `when@dev:` only, or use `allow_unsigned_webhooks: '%kernel.debug%'` (a container parameter, resolved to a literal boolean — the demo does this).
 - **`allow_unsigned_webhooks` must be a literal `true` / `false`:** `%env(bool:…)%` values are rejected at compile time.
 - **Routes:** no change needed. `@WhatsappBusinessBundle/Resources/config/routing.yaml` keeps working (it now imports the controller `#[Route]` attributes); route names and paths are unchanged. You may import `@WhatsappBusinessBundle/Webhook/WebhookController.php` with `type: attribute` instead. The webhook is **not** picked up by `resource: routing.controllers` (Symfony 7.3+): import the bundle routing explicitly as before.

@@ -116,7 +116,7 @@ final class Configuration implements ConfigurationInterface
                             'timeout'                      => 10.0,
                             'connect_timeout'              => 5.0,
                             'app_secret'                   => null,
-                            'webhook_verify_token'         => 'demo-verify',
+                            'webhook_verify_token'         => null,
                             'allow_unsigned_webhooks'      => false,
                         ],
                     ])

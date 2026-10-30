@@ -31,9 +31,22 @@ final class WebhookVerifierTest extends TestCase
         $body     = '{"object":"whatsapp_business_account"}';
         $header   = 'sha256=' . hash_hmac('sha256', $body, 'app-secret');
         $verifier->verifySignature($profile, $body, $header);
-        $verifier->verifySignature($profile, $body, hash_hmac('sha256', $body, 'app-secret'));
         $this->expectException(WebhookVerificationException::class);
         $verifier->verifySignature($profile, $body, 'sha256=deadbeef');
+    }
+
+    public function testBareDigestWithoutPrefixIsRejected(): void
+    {
+        $body = '{"object":"whatsapp_business_account"}';
+        $this->expectException(WebhookVerificationException::class);
+        (new WebhookVerifier())->verifySignature(ProfileFactory::mock(), $body, hash_hmac('sha256', $body, 'app-secret'));
+    }
+
+    public function testEmptyRuntimeSecretIsRejectedWhenUnsignedIsNotAllowed(): void
+    {
+        // L3: an %env()% app_secret resolving to '' with the compile-time flag forced to false fails closed.
+        $this->expectException(WebhookVerificationException::class);
+        (new WebhookVerifier())->verifySignature(ProfileFactory::mock(allowUnsigned: false, appSecret: ''), '{}', null);
     }
 
     public function testMissingSignatureWhenSecretConfigured(): void
