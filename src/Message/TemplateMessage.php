@@ -13,6 +13,8 @@ namespace Nowo\WhatsappBusinessBundle\Message;
 final readonly class TemplateMessage implements OutgoingMessage
 {
     /**
+     * Creates a template message with body/header/button parameters or header media.
+     *
      * @param list<string> $bodyParameters
      * @param list<string> $headerParameters
      * @param list<string> $buttonParameters
@@ -28,11 +30,17 @@ final readonly class TemplateMessage implements OutgoingMessage
     ) {
     }
 
+    /**
+     * Returns the template message type.
+     */
     public function type(): MessageType
     {
         return MessageType::Template;
     }
 
+    /**
+     * Returns the Graph `template` field with header, body and quick-reply button components.
+     */
     public function graphFields(): array
     {
         $components = [];

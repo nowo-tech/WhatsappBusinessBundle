@@ -14,6 +14,9 @@ use function sprintf;
  */
 final class UnknownProfileException extends WhatsappBusinessException
 {
+    /**
+     * Creates the exception for a profile name that is not configured.
+     */
     public static function forProfile(string $name): self
     {
         return new self(sprintf('Unknown WhatsApp Business profile "%s".', $name));

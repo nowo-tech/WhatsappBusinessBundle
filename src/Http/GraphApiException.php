@@ -24,6 +24,8 @@ final class GraphApiException extends WhatsappBusinessException
     public readonly array $raw;
 
     /**
+     * Creates the exception; the message and the raw payload are redacted.
+     *
      * @param array<string, mixed> $raw
      */
     public function __construct(
@@ -39,6 +41,8 @@ final class GraphApiException extends WhatsappBusinessException
     }
 
     /**
+     * Creates the exception from a Graph error payload (message, code, subcode, trace id).
+     *
      * @param array<string, mixed> $payload
      */
     public static function fromGraph(array $payload, int $httpStatus): self
@@ -67,6 +71,9 @@ final class GraphApiException extends WhatsappBusinessException
         return new self($message, $httpStatus, $code, $subcode, $fbtraceId, $payload);
     }
 
+    /**
+     * Creates the exception for a network/timeout failure before any Graph response.
+     */
     public static function transportFailure(): self
     {
         return new self('WhatsApp Cloud API transport failure.', 0, null, null, null, []);
@@ -88,12 +95,17 @@ final class GraphApiException extends WhatsappBusinessException
         return new self('WhatsApp media download failed.', $httpStatus, null, null, null, []);
     }
 
+    /**
+     * Creates the exception for a media URL outside the download allow-list.
+     */
     public static function mediaUrlRejected(): self
     {
         return new self('WhatsApp media download URL is not allowed.', 0, null, null, null, []);
     }
 
     /**
+     * Returns the dump representation without the raw payload.
+     *
      * @return array<string, mixed>
      */
     public function __debugInfo(): array

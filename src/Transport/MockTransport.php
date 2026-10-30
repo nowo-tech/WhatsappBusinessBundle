@@ -39,6 +39,8 @@ final class MockTransport implements TransportInterface, ResetInterface
     private readonly int $maxRecorded;
 
     /**
+     * Creates the mock transport keeping at most $maxRecorded entries.
+     *
      * @param int $maxRecorded only the most recent entries are kept (minimum 1)
      */
     public function __construct(
@@ -48,6 +50,9 @@ final class MockTransport implements TransportInterface, ResetInterface
         $this->maxRecorded = max(1, $maxRecorded);
     }
 
+    /**
+     * Records the body in memory and returns a Graph-shaped response with a mock message id.
+     */
     public function send(array $graphBody): array
     {
         $id = 'mock.' . bin2hex(random_bytes(8));
@@ -65,11 +70,17 @@ final class MockTransport implements TransportInterface, ResetInterface
         ];
     }
 
+    /**
+     * Records the read receipt in memory.
+     */
     public function markAsRead(string $messageId): void
     {
         $this->record(['read' => $messageId]);
     }
 
+    /**
+     * Returns a mock media id without reading the file.
+     */
     public function uploadMedia(string $filePath, string $mimeType): MediaId
     {
         $id = 'mock-media.' . bin2hex(random_bytes(6));
@@ -77,11 +88,17 @@ final class MockTransport implements TransportInterface, ResetInterface
         return new MediaId($id, ['id' => $id, 'file' => $filePath, 'mime' => $mimeType]);
     }
 
+    /**
+     * Returns fixed mock bytes for the media id.
+     */
     public function downloadMedia(string $mediaId): MediaDownload
     {
         return new MediaDownload('mock-bytes', 'application/octet-stream', 'https://example.invalid/media/' . $mediaId);
     }
 
+    /**
+     * Returns one approved mock template; requires the WABA id like the live transport.
+     */
     public function listTemplates(): array
     {
         if ($this->profile->whatsappBusinessAccountId === null || $this->profile->whatsappBusinessAccountId === '') {
@@ -101,6 +118,8 @@ final class MockTransport implements TransportInterface, ResetInterface
     }
 
     /**
+     * Returns the sends and read receipts recorded in the current request.
+     *
      * @return list<array<string, mixed>>
      */
     public function recorded(): array
@@ -108,6 +127,9 @@ final class MockTransport implements TransportInterface, ResetInterface
         return $this->sent;
     }
 
+    /**
+     * Clears the recorded sends (kernel.reset and every main request).
+     */
     public function reset(): void
     {
         $this->sent = [];

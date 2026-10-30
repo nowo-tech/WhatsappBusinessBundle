@@ -12,17 +12,26 @@ namespace Nowo\WhatsappBusinessBundle\Message;
  */
 final readonly class TextMessage implements OutgoingMessage
 {
+    /**
+     * Creates a plain-text message, optionally with link previews.
+     */
     public function __construct(
         public string $body,
         public bool $previewUrl = false,
     ) {
     }
 
+    /**
+     * Returns the text message type.
+     */
     public function type(): MessageType
     {
         return MessageType::Text;
     }
 
+    /**
+     * Returns the Graph `text` field.
+     */
     public function graphFields(): array
     {
         return [

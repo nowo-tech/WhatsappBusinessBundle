@@ -20,6 +20,9 @@ use function substr;
  */
 final class WebhookVerifier
 {
+    /**
+     * Tells whether a GET subscribe request carries mode=subscribe and the profile verify token (constant-time).
+     */
     public function verifySubscribe(CloudApiProfile $profile, string $mode, string $token): bool
     {
         $expected = $profile->webhookVerifyToken;
@@ -27,6 +30,9 @@ final class WebhookVerifier
         return $mode === 'subscribe' && $expected !== null && $expected !== '' && hash_equals($expected, $token);
     }
 
+    /**
+     * Checks X-Hub-Signature-256 against the HMAC-SHA256 of the raw body; throws on mismatch.
+     */
     public function verifySignature(CloudApiProfile $profile, string $rawBody, ?string $header): void
     {
         $secret = $profile->appSecret;

@@ -17,6 +17,8 @@ use SensitiveParameter;
 final readonly class CloudApiProfile
 {
     /**
+     * Immutable profile settings; secrets are marked sensitive and redacted from dumps.
+     *
      * @param non-empty-string $name
      * @param non-empty-string $phoneNumberId
      * @param non-empty-string $graphVersion
@@ -42,6 +44,8 @@ final readonly class CloudApiProfile
     }
 
     /**
+     * Returns the profile for dumps with every secret replaced by a placeholder.
+     *
      * @return array<string, mixed>
      */
     public function __debugInfo(): array
@@ -62,16 +66,25 @@ final readonly class CloudApiProfile
         ];
     }
 
+    /**
+     * Graph path of the messages endpoint for this phone number id.
+     */
     public function messagesPath(): string
     {
         return $this->phoneNumberId . '/messages';
     }
 
+    /**
+     * Graph path of the media upload endpoint for this phone number id.
+     */
     public function mediaPath(): string
     {
         return $this->phoneNumberId . '/media';
     }
 
+    /**
+     * Graph path of the message templates endpoint; requires the WABA id.
+     */
     public function templatesPath(): string
     {
         $wabaId = $this->whatsappBusinessAccountId;

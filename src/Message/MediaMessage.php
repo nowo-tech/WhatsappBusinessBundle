@@ -16,6 +16,9 @@ use function in_array;
  */
 final readonly class MediaMessage implements OutgoingMessage
 {
+    /**
+     * Creates a media message; only image, audio, video, document and sticker types are accepted.
+     */
     public function __construct(
         public MessageType $mediaType,
         public MediaSource $source,
@@ -29,36 +32,57 @@ final readonly class MediaMessage implements OutgoingMessage
         }
     }
 
+    /**
+     * Creates an image message with an optional caption.
+     */
     public static function image(MediaSource $source, ?string $caption = null): self
     {
         return new self(MessageType::Image, $source, $caption);
     }
 
+    /**
+     * Creates an audio message.
+     */
     public static function audio(MediaSource $source): self
     {
         return new self(MessageType::Audio, $source);
     }
 
+    /**
+     * Creates a video message with an optional caption.
+     */
     public static function video(MediaSource $source, ?string $caption = null): self
     {
         return new self(MessageType::Video, $source, $caption);
     }
 
+    /**
+     * Creates a document message with optional caption and file name.
+     */
     public static function document(MediaSource $source, ?string $caption = null, ?string $filename = null): self
     {
         return new self(MessageType::Document, $source, $caption, $filename);
     }
 
+    /**
+     * Creates a sticker message.
+     */
     public static function sticker(MediaSource $source): self
     {
         return new self(MessageType::Sticker, $source);
     }
 
+    /**
+     * Returns the media type of this message.
+     */
     public function type(): MessageType
     {
         return $this->mediaType;
     }
 
+    /**
+     * Returns the Graph media field (id or link, plus caption/filename when set).
+     */
     public function graphFields(): array
     {
         $field = $this->source->toGraphField();

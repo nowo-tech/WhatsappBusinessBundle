@@ -12,6 +12,9 @@ namespace Nowo\WhatsappBusinessBundle\Message;
  */
 final readonly class LocationMessage implements OutgoingMessage
 {
+    /**
+     * Creates a location pin with optional name and address.
+     */
     public function __construct(
         public float $latitude,
         public float $longitude,
@@ -20,11 +23,17 @@ final readonly class LocationMessage implements OutgoingMessage
     ) {
     }
 
+    /**
+     * Returns the location message type.
+     */
     public function type(): MessageType
     {
         return MessageType::Location;
     }
 
+    /**
+     * Returns the Graph `location` field (empty name/address are omitted).
+     */
     public function graphFields(): array
     {
         $location = [

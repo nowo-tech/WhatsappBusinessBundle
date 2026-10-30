@@ -19,6 +19,9 @@ use function str_starts_with;
  */
 final class Configuration implements ConfigurationInterface
 {
+    /**
+     * Builds the nowo_whatsapp_business configuration tree (default profile + named profiles).
+     */
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('nowo_whatsapp_business');

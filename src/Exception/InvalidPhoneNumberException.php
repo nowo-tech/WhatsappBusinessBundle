@@ -12,6 +12,9 @@ namespace Nowo\WhatsappBusinessBundle\Exception;
  */
 final class InvalidPhoneNumberException extends WhatsappBusinessException
 {
+    /**
+     * Creates the exception for a phone number that is not 8–15 digits.
+     */
     public static function invalid(): self
     {
         return new self('Phone number must be 8–15 digits (E.164 without +).');

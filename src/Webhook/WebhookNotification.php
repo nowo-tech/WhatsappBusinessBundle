@@ -13,6 +13,8 @@ namespace Nowo\WhatsappBusinessBundle\Webhook;
 final readonly class WebhookNotification
 {
     /**
+     * Creates the parsed notification with its messages, statuses and raw payload.
+     *
      * @param list<IncomingMessage> $messages
      * @param list<StatusUpdate> $statuses
      * @param array<string, mixed> $raw
@@ -26,6 +28,8 @@ final readonly class WebhookNotification
     }
 
     /**
+     * Returns the dump representation with secrets, payloads and phone numbers redacted.
+     *
      * @return array<string, mixed>
      */
     public function __debugInfo(): array
