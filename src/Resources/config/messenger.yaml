@@ -4,6 +4,6 @@ services:
         autoconfigure: true
         public: false
 
-    Nowo\WhatsappBusinessBundle\Messenger\SendOutgoingMessageHandler:
-        tags:
-            - { name: messenger.message_handler }
+    # Registered by #[AsMessageHandler] through autoconfiguration (REQ-MSG-001);
+    # no explicit messenger.message_handler tag (it would register the handler twice).
+    Nowo\WhatsappBusinessBundle\Messenger\SendOutgoingMessageHandler: ~
