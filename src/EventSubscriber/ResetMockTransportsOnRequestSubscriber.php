@@ -22,6 +22,8 @@ use Symfony\Contracts\Service\ResetInterface;
 final readonly class ResetMockTransportsOnRequestSubscriber implements EventSubscriberInterface
 {
     /**
+     * Creates the subscriber with the mock transports to reset.
+     *
      * @param iterable<ResetInterface> $transports
      */
     public function __construct(
@@ -29,11 +31,17 @@ final readonly class ResetMockTransportsOnRequestSubscriber implements EventSubs
     ) {
     }
 
+    /**
+     * Subscribes early to kernel.request so mock transports start every request empty.
+     */
     public static function getSubscribedEvents(): array
     {
         return [KernelEvents::REQUEST => ['onKernelRequest', 4096]];
     }
 
+    /**
+     * Clears the recorded sends of every instantiated mock transport on main requests.
+     */
     public function onKernelRequest(RequestEvent $event): void
     {
         if (!$event->isMainRequest()) {

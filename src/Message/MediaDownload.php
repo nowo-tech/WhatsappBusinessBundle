@@ -14,6 +14,9 @@ use Nowo\WhatsappBusinessBundle\Http\SecretRedactor;
  */
 final readonly class MediaDownload
 {
+    /**
+     * Creates the downloaded media value (bytes, MIME type and source URL).
+     */
     public function __construct(
         public string $contents,
         public ?string $mimeType,
@@ -22,6 +25,8 @@ final readonly class MediaDownload
     }
 
     /**
+     * Returns the dump representation without the bytes and with the URL query hidden.
+     *
      * @return array<string, mixed>
      */
     public function __debugInfo(): array

@@ -16,6 +16,8 @@ use function is_string;
 final class WebhookParser
 {
     /**
+     * Extracts every inbound message and status from a Graph webhook payload.
+     *
      * @param array<string, mixed> $payload
      */
     public function parse(array $payload): WebhookNotification

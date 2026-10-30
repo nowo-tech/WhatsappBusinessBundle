@@ -17,6 +17,8 @@ use function is_string;
 final readonly class StatusUpdate
 {
     /**
+     * Creates one status update.
+     *
      * @param array<string, mixed> $raw
      */
     public function __construct(
@@ -29,6 +31,8 @@ final readonly class StatusUpdate
     }
 
     /**
+     * Creates the status update from one Graph webhook statuses item.
+     *
      * @param array<string, mixed> $payload
      */
     public static function fromGraph(array $payload): self
@@ -42,6 +46,8 @@ final readonly class StatusUpdate
     }
 
     /**
+     * Returns the dump representation with secrets, payloads and phone numbers redacted.
+     *
      * @return array<string, mixed>
      */
     public function __debugInfo(): array

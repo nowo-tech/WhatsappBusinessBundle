@@ -18,6 +18,8 @@ use function is_string;
 final readonly class MessageResult
 {
     /**
+     * Creates the send result (Graph message id, recipient wa_ids and raw response).
+     *
      * @param list<string> $recipientIds
      * @param array<string, mixed> $raw
      */
@@ -29,6 +31,8 @@ final readonly class MessageResult
     }
 
     /**
+     * Creates the result from a Graph messages response.
+     *
      * @param array<string, mixed> $payload
      */
     public static function fromGraph(array $payload): self
@@ -53,6 +57,8 @@ final readonly class MessageResult
     }
 
     /**
+     * Returns the dump representation with masked recipients and without the raw payload.
+     *
      * @return array<string, mixed>
      */
     public function __debugInfo(): array

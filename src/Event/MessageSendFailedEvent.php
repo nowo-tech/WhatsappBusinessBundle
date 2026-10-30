@@ -16,6 +16,9 @@ use Symfony\Contracts\EventDispatcher\Event;
  */
 final class MessageSendFailedEvent extends Event
 {
+    /**
+     * Creates the event for an outbound message the Cloud API rejected or could not receive.
+     */
     public function __construct(
         public readonly string $profile,
         public readonly OutgoingEnvelope $envelope,

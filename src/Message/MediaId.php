@@ -13,6 +13,8 @@ namespace Nowo\WhatsappBusinessBundle\Message;
 final readonly class MediaId
 {
     /**
+     * Creates the uploaded media id with the raw Graph response.
+     *
      * @param array<string, mixed> $raw
      */
     public function __construct(
@@ -22,6 +24,8 @@ final readonly class MediaId
     }
 
     /**
+     * Returns the dump representation without the raw payload.
+     *
      * @return array<string, mixed>
      */
     public function __debugInfo(): array

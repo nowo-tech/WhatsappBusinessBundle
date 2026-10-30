@@ -12,6 +12,9 @@ namespace Nowo\WhatsappBusinessBundle\Exception;
  */
 final class MissingBusinessAccountException extends WhatsappBusinessException
 {
+    /**
+     * Creates the exception for template management on a profile without WABA id.
+     */
     public static function forProfile(string $profile): self
     {
         return new self('whatsapp_business_account_id is required for template management on profile "' . $profile . '".');

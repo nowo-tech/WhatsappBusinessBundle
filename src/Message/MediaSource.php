@@ -22,6 +22,9 @@ final readonly class MediaSource
     ) {
     }
 
+    /**
+     * Creates a source pointing to an uploaded media id.
+     */
     public static function id(string $mediaId): self
     {
         if ($mediaId === '') {
@@ -31,6 +34,9 @@ final readonly class MediaSource
         return new self($mediaId, null);
     }
 
+    /**
+     * Creates a source pointing to an https:// media URL.
+     */
     public static function link(string $url): self
     {
         if (!str_starts_with($url, 'https://')) {
@@ -41,6 +47,8 @@ final readonly class MediaSource
     }
 
     /**
+     * Returns the Graph media reference (`id` or `link`).
+     *
      * @return array{id: string}|array{link: string}
      */
     public function toGraphField(): array

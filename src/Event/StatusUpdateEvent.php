@@ -15,6 +15,9 @@ use Symfony\Contracts\EventDispatcher\Event;
  */
 final class StatusUpdateEvent extends Event
 {
+    /**
+     * Creates the event for one delivery/read status received on a profile webhook.
+     */
     public function __construct(
         public readonly string $profile,
         public readonly StatusUpdate $status,

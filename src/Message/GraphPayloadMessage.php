@@ -13,6 +13,8 @@ namespace Nowo\WhatsappBusinessBundle\Message;
 final readonly class GraphPayloadMessage implements OutgoingMessage
 {
     /**
+     * Creates a message from a Graph type and its type-specific fields.
+     *
      * @param array<string, mixed> $fields
      */
     public function __construct(
@@ -22,6 +24,8 @@ final readonly class GraphPayloadMessage implements OutgoingMessage
     }
 
     /**
+     * Creates a contacts message from Graph contact cards.
+     *
      * @param list<array<string, mixed>> $contacts
      */
     public static function contacts(array $contacts): self
@@ -30,6 +34,8 @@ final readonly class GraphPayloadMessage implements OutgoingMessage
     }
 
     /**
+     * Creates an interactive (buttons/list) message from a Graph interactive object.
+     *
      * @param array<string, mixed> $interactive
      */
     public static function interactive(array $interactive): self
@@ -37,11 +43,17 @@ final readonly class GraphPayloadMessage implements OutgoingMessage
         return new self(MessageType::Interactive, ['interactive' => $interactive]);
     }
 
+    /**
+     * Returns the Graph message type of this payload.
+     */
     public function type(): MessageType
     {
         return $this->messageType;
     }
 
+    /**
+     * Returns the host-supplied Graph fields for this type.
+     */
     public function graphFields(): array
     {
         return $this->fields;
