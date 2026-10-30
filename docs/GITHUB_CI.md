@@ -22,6 +22,7 @@ Canonical per-repo doc for **REQ-GIT-001** (no Cursor co-author trailers). Copy 
 - [Acceptance criteria](#acceptance-criteria)
 - [References](#references)
 - [Workflows in this repository](#workflows-in-this-repository)
+- [CI evidence for this private repository (REQ-CI-003)](#ci-evidence-for-this-private-repository-req-ci-003)
 
 ## Scope
 
@@ -245,3 +246,13 @@ A bundle complies when:
 - `sync-releases.yml` — backfill missing releases
 - `pr-lint.yml` — semantic PR titles
 - `stale.yml` — stale issues/PRs
+
+## CI evidence for this private repository (REQ-CI-003)
+
+`nowo-tech/WhatsappBusinessBundle` is **private**. GitHub Actions does not start any `ci.yml` job here: every job ends `failure` with **0 steps** and the annotation *"The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings"* (for example runs [40738817183](https://github.com/nowo-tech/WhatsappBusinessBundle/actions/runs/40738817183) on `e259638`, [40714968839](https://github.com/nowo-tech/WhatsappBusinessBundle/actions/runs/40714968839) on `f137ca8`, [40245374159](https://github.com/nowo-tech/WhatsappBusinessBundle/actions/runs/40245374159) on `82d6677`). Nothing in the workflow is skipped or disabled; the account billing blocks the runners.
+
+Until Actions can run (billing fixed, self-hosted runner, or public repository), REQ-CI-003 is met by recording a local run of the same gates on the commit that is merged / tagged (DETAILS clarification 2026-10-20). Each row lists the commit, the date and the result of the Docker-based gates: `composer validate --strict`, `cs-check`, `rector-dry`, `phpstan` (level 8, `ignoreErrors: []`), `igor`, PHPUnit + `coverage-check` (100% lines), `composer audit --locked` and the demo `release-check` (update-bundle, demo tests, HTTP 200).
+
+| Date (UTC) | Commit | Gates | Result |
+|------------|--------|-------|--------|
+

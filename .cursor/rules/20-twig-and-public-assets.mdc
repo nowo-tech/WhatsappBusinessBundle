@@ -1,18 +1,18 @@
 ---
-description: Twig templates and public bundle assets
+description: Twig templates and public assets (this bundle ships none; demo templates only)
 globs:
-  - "templates/**/*.twig"
-  - "src/**/Resources/views/**/*.twig"
-  - "src/Resources/public/**/*"
+  - "demo/**/templates/**/*.twig"
+  - "demo/**/public/**/*"
 alwaysApply: false
 ---
 
-Prefer:
-- small, backward-compatible template and public asset changes
-- preserving current block structure
-- local DOM updates
-- reusing existing classes, ids, and hooks
-- minimal asset changes
+This bundle ships no Twig templates, no Twig namespace and no `src/Resources/public` assets (it is a Cloud API transport).
+Twig exists only in the demo (`demo/symfony8/templates`).
 
-Do not edit generated files inside src/Resources/public/build.
-Do not rewrite entire templates or public asset trees for a local change.
+Prefer:
+- small, backward-compatible demo template changes that preserve the current block structure
+- Symfony Form Types rendered with `form_start` / the rendered-aware child loop / `form_end` (REQ-TWIG-003 / REQ-TWIG-005)
+- reusing existing classes, ids and hooks
+
+Do not hand-write raw `<form>`, `<input>`, `<textarea>` or `<select>` in demo templates (`make check-no-raw-html-form` fails).
+Do not add bundle templates or public assets without updating README, docs and the release checklist.

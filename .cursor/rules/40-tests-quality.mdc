@@ -2,25 +2,26 @@
 description: Tests and quality rules
 globs:
   - "tests/**/*.php"
-  - "tests/**/*.ts"
-  - "tests/**/*.js"
-  - "src/Resources/assets/**/*.test.ts"
-  - "src/Resources/assets/**/*.spec.ts"
-  - "src/Resources/assets/**/*.test.js"
-  - "src/Resources/assets/**/*.spec.js"
   - "phpunit.xml*"
-  - "vitest.config.*"
-  - "eslint.config.*"
+  - "phpstan.neon*"
+  - ".php-cs-fixer.dist.php"
+  - "rector.php"
 alwaysApply: false
 ---
 
-When changing behavior, prefer adding or updating the nearest relevant test.
+When changing behavior, prefer adding or updating the nearest relevant test (`tests/Unit/<Namespace>` mirrors `src/`; kernel boot tests live in `tests/Integration`).
 
 Prefer:
 - one focused test
 - minimal fixture changes
-- preserving the existing testing style
-- test updates close to the changed behavior
+- preserving the existing testing style (PHPUnit attributes such as `#[CoversClass]`, no docblock annotations)
+- obvious placeholders for credentials in fixtures (`REDACTED-TEST`, `demo-token`)
+
+Quality gates (run through Docker):
+- `make test`, `make coverage-check` (100% PHP line coverage), `make phpstan` (level 8, `ignoreErrors: []`)
+- `make cs-check`, `make rector-dry`, `make igor`
+- `make release-check` before a release
 
 Do not introduce new testing frameworks unless explicitly requested.
 Do not rewrite unrelated tests.
+Do not lower the coverage gate or add PHPStan ignores to make a run pass.

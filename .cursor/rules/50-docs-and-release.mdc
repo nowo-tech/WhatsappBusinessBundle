@@ -13,5 +13,7 @@ Prefer:
 - preserving existing document structure and tone
 - keeping examples consistent with actual defaults and routes in this bundle
 
+Changelog lives in `docs/CHANGELOG.md` (`## [Unreleased]` / `## [x.y.z] - YYYY-MM-DD`); upgrade notes in `docs/UPGRADING.md`; release steps in `docs/RELEASE.md` (`make release-check`).
+
 Do not invent features, versions, or commands that are not present in the repository.
 Do not remove past release history unless explicitly requested.
