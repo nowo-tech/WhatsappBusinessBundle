@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.3.0] - 2026-10-30](#130---2026-10-30)
 - [[1.2.2] - 2026-10-13](#122---2026-10-13)
 - [[1.2.1] - 2026-10-13](#121---2026-10-13)
 - [[1.2.0] - 2026-10-13](#120---2026-10-13)
@@ -20,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [[1.0.0] - 2026-08-24](#100---2026-08-24)
 
 ## [Unreleased]
+
+## [1.3.0] - 2026-10-30
+
+Opt-in routes, kernel.debug-only unsigned webhooks, webhook profile binding, token never in exception traces (audit BU), Messenger attribute handler, 100% coverage gate. See [UPGRADING](UPGRADING.md#to-130).
 
 ### Security
 
@@ -49,6 +54,8 @@ Independent REQ-SEC-004 audit (Appendix BU, 2026-10-30): **Pass (good) / Low**. 
 - Dependencies refreshed (Composer and pnpm/npm lock files of the bundle and its demos, campaign 2026-10-19).
 - `.php-cs-fixer.dist.php`: `new ParallelConfig(2)` (REQ-CS-001).
 - Documentation: wave-1 REQ compliance — README documentation list order and GitHub stars badge, canonical issue templates (`---feature-request.md`), GitHub CI requirements doc from the shared template, CONTRIBUTING Cursor Agent settings, TOCs, DEMO-FRANKENPHP dev/prod start and troubleshooting, Engram ↔ spec-driven cross-reference, spec-driven development rewrite, full GitHub Spec Kit manual, constitution title, baseline spec (US-*, grouped FR-*, SC-*, validation) and categorized inventory (60/60).
+
+[1.3.0]: https://github.com/nowo-tech/WhatsappBusinessBundle/releases/tag/v1.3.0
 
 ## [1.2.2] - 2026-10-13
 
