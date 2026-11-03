@@ -5,6 +5,7 @@ version: 2
 updates:
   - package-ecosystem: "composer"
     directory: "/"
+    versioning-strategy: widen
     schedule:
       interval: "weekly"
       day: "monday"
