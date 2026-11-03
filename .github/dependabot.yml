@@ -23,6 +23,7 @@ updates:
       phpstan:
         patterns:
           - "phpstan/*"
+          - "rector/rector"
     commit-message:
       prefix: "chore(deps):"
     ignore:
