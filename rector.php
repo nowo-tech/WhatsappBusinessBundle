@@ -11,6 +11,7 @@ declare(strict_types=1);
  * @see https://getrector.com/documentation
  */
 use Rector\Config\RectorConfig;
+use Rector\Symfony\CodeQuality\Rector\Class_\EventSubscriberToAttributeRector;
 use Rector\ValueObject\PhpVersion;
 
 return RectorConfig::configure()
@@ -26,6 +27,9 @@ return RectorConfig::configure()
         typeDeclarations: true,
     )
     ->withSkip([
+        // rector 2.8.3 (symfony set): a bundle must not rely on the host app's autoconfiguration for
+        // #[AsEventListener]; the subscriber is wired explicitly in the service config.
+        EventSubscriberToAttributeRector::class,
         __DIR__ . '/demo',
         __DIR__ . '/vendor',
     ]);
