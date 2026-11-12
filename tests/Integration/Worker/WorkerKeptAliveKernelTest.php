@@ -14,6 +14,7 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\HttpKernel;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 use function gc_collect_cycles;
@@ -54,7 +55,10 @@ final class WorkerKeptAliveKernelTest extends TestCase
         $locator   = $container->get('test.service_container');
         self::assertInstanceOf(ContainerInterface::class, $locator);
 
-        // Fetched once and kept, as a kept-alive worker does; `services_resetter` is never called.
+        // Fetched once and kept, as a kept-alive worker does; `services_resetter` is never called: requests go
+        // straight through the `http_kernel` service (Kernel::handle() would reset services from the 2nd request on).
+        $httpKernel = $container->get('http_kernel');
+        self::assertInstanceOf(HttpKernel::class, $httpKernel);
         $registry   = $locator->get(WhatsappClientRegistryInterface::class);
         $dispatcher = $locator->get('event_dispatcher');
         self::assertInstanceOf(WhatsappClientRegistryInterface::class, $registry);
@@ -93,14 +97,14 @@ final class WorkerKeptAliveKernelTest extends TestCase
 
             // GET subscribe challenge: only the tenant's own verify token is accepted.
             $challenge = 'challenge-' . $i;
-            $response  = $this->handle($kernel, Request::create('/whatsapp/webhook/' . $tenant, 'GET', [
+            $response  = $this->handle($httpKernel, Request::create('/whatsapp/webhook/' . $tenant, 'GET', [
                 'hub_mode'         => 'subscribe',
                 'hub_verify_token' => $tenants[$tenant]['verify'],
                 'hub_challenge'    => $challenge,
             ]));
             self::assertSame(Response::HTTP_OK, $response->getStatusCode(), $at);
             self::assertSame($challenge, $response->getContent(), $at);
-            $response = $this->handle($kernel, Request::create('/whatsapp/webhook/' . $tenant, 'GET', [
+            $response = $this->handle($httpKernel, Request::create('/whatsapp/webhook/' . $tenant, 'GET', [
                 'hub_mode'         => 'subscribe',
                 'hub_verify_token' => $tenants[$other]['verify'],
                 'hub_challenge'    => $challenge,
@@ -110,7 +114,7 @@ final class WorkerKeptAliveKernelTest extends TestCase
             // POST signed with the tenant's secret, carrying a message unique to this iteration and tenant.
             $text     = sprintf('hello from %s #%d', $tenant, $i);
             $body     = $this->payload($tenants[$tenant]['phone'], '3460000' . $i, $text);
-            $response = $this->handle($kernel, $this->signedPost($tenant, $body, $tenants[$tenant]['secret']));
+            $response = $this->handle($httpKernel, $this->signedPost($tenant, $body, $tenants[$tenant]['secret']));
             self::assertSame(Response::HTTP_OK, $response->getStatusCode(), $at);
             self::assertSame([[$tenant, $text]], $seen->getArrayCopy(), $at);
 
@@ -124,10 +128,10 @@ final class WorkerKeptAliveKernelTest extends TestCase
 
             // The other tenant's secret, or its payload on this tenant's URL, is rejected and dispatches nothing.
             $seen->exchangeArray([]);
-            $response = $this->handle($kernel, $this->signedPost($tenant, $body, $tenants[$other]['secret']));
+            $response = $this->handle($httpKernel, $this->signedPost($tenant, $body, $tenants[$other]['secret']));
             self::assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode(), $at);
             $foreign  = $this->payload($tenants[$other]['phone'], '3470000' . $i, 'foreign ' . $i);
-            $response = $this->handle($kernel, $this->signedPost($tenant, $foreign, $tenants[$tenant]['secret']));
+            $response = $this->handle($httpKernel, $this->signedPost($tenant, $foreign, $tenants[$tenant]['secret']));
             self::assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode(), $at);
             self::assertSame([], $seen->getArrayCopy(), $at);
         }
@@ -139,7 +143,11 @@ final class WorkerKeptAliveKernelTest extends TestCase
         $kernel->shutdown();
     }
 
-    private function handle(KeptAliveKernel $kernel, Request $request): Response
+    /**
+     * Drives the `http_kernel` service directly, like FrankenPHP's worker loop with kernel reset false.
+     * `Kernel::handle()` must not be used here: it runs `services_resetter` from the second request on.
+     */
+    private function handle(HttpKernel $kernel, Request $request): Response
     {
         $response = $kernel->handle($request, HttpKernelInterface::MAIN_REQUEST, false);
         $kernel->terminate($request, $response);
