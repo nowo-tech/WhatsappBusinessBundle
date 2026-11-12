@@ -4,6 +4,7 @@
 |-------|-------|
 | Package | `nowo-tech/whatsapp-business-bundle` (`symfony-bundle`) |
 | Audited revision | pre-`v1.1.1` (worker hardening on top of `v1.1.0` / `fd82ed9`) |
+| Reviewed version | `v1.3.0` (2026-11-12 review: `git diff v1.3.0 -- src` is empty at this commit) |
 | Audit date | 2026-09-23 (reconfirmed 2026-09-25 for release) |
 | Method | Manual review of every file under `src/` (clients, transports, Graph HTTP client, webhook controller, Messenger handler, commands, DI extension, `Resources/config/*.yaml`) |
 | Remediation (2026-09-23) | W-01 resolved (mock transport cleared per main request + bounded); W-02 and W-03 accepted |
@@ -18,6 +19,7 @@
   - [W-01 — `MockTransport` keeps every recorded send; only `kernel.reset` clears it (Medium)](#w-01--mocktransport-keeps-every-recorded-send-only-kernelreset-clears-it-medium)
   - [W-02 — VarDumper casters are registered in a process-global static map at boot (Info)](#w-02--vardumper-casters-are-registered-in-a-process-global-static-map-at-boot-info)
   - [W-03 — Media downloads are loaded fully into memory (Info)](#w-03--media-downloads-are-loaded-fully-into-memory-info)
+- [Kept-alive kernel test (REQ-RUNTIME-002)](#kept-alive-kernel-test-req-runtime-002)
 - [Usage recommendations in worker mode](#usage-recommendations-in-worker-mode)
 - [Re-audit triggers](#re-audit-triggers)
 
@@ -88,6 +90,12 @@ Messages, webhook DTOs and templates under `src/Message/`, `src/Webhook/` and `s
 - **Status:** Accepted — per-request peak only, not retained; changing `downloadMedia()` to streaming would break the `MediaDownload` API.
 
 No other findings. HTTP timeouts are explicit and configurable (`timeout` default 10 s, `connect_timeout` default 5 s in `src/DependencyInjection/Configuration.php:81-90`), which keeps a slow Graph API from pinning worker threads indefinitely.
+
+## Kept-alive kernel test (REQ-RUNTIME-002)
+
+**Safe with kernel reset false.** `tests/Integration/Worker/WorkerKeptAliveKernelTest.php::testWebhooksInOneKernelWithoutResetterKeepTenantsSeparatedAndMemoryFlat` boots ONE kernel (two mock profiles, `alpha` and `beta`, each with its own app secret, verify token and phone number id) and drives `http_kernel` `handle()` + `terminate()` 1000 times alternating the two tenants, never calling `services_resetter` or `kernel.reset`. Per iteration it checks the GET challenge (own verify token accepted, the other tenant's refused), a POST signed with the tenant's own secret (accepted; a listener sees only that tenant's message and replies through the registry client, so the tenant's mock transport holds exactly that one reply, proving `ResetMockTransportsOnRequestSubscriber` clears it without `kernel.reset`), and that the other tenant's secret or a payload for the other phone number id is refused with nothing dispatched. After a 50-iteration warm-up and a GC pass, memory growth must stay under 4 MiB.
+
+Rule 7 (host Doctrine): the bundle has no persistence and never touches the host default EntityManager; nothing here clears, flushes or closes it.
 
 ## Usage recommendations in worker mode
 
