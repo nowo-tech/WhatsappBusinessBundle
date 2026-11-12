@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Tests
+
+- `WorkerKeptAliveKernelTest`: one kept-alive kernel, 1000 signed webhooks through `http_kernel` as two tenants, no resetter, isolation and memory assertions (REQ-RUNTIME-002); `docs/FRANKENPHP-WORKER-AUDIT.md` refreshed.
+
+### CI
+
+- Igor FrankenPHP worker-state audit job (`composer igor`, REQ-CS-008).
+
 ## [1.3.0] - 2026-10-30
 
 Opt-in routes, kernel.debug-only unsigned webhooks, webhook profile binding, token never in exception traces (audit BU), Messenger attribute handler, 100% coverage gate. See [UPGRADING](UPGRADING.md#to-130).
