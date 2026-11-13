@@ -14,6 +14,10 @@
   - [Logging](#logging)
 - [CLI](#cli)
 - [Forms in host apps and demos (REQ-TWIG-005)](#forms-in-host-apps-and-demos-req-twig-005)
+- [Host architecture: standard Symfony and DDD / hexagonal (REQ-ARCH-001)](#host-architecture-standard-symfony-and-ddd--hexagonal-req-arch-001)
+  - [Standard Symfony host](#standard-symfony-host)
+  - [DDD / hexagonal host](#ddd--hexagonal-host)
+  - [What this bundle does not have](#what-this-bundle-does-not-have)
 
 ## Send a text
 
@@ -149,3 +153,69 @@ The bundle ships no page templates of its own; host apps call its services from 
 ```
 
 Hosts and demos must not reintroduce raw `<form>` / `<input>` / `<textarea>` / `<select>` markup; `make check-no-raw-html-form` (part of `make release-check`) fails when bundle or demo Twig contains them.
+
+## Host architecture: standard Symfony and DDD / hexagonal (REQ-ARCH-001)
+
+Both host kinds are supported. The standard Symfony path is the zero-config default; the DDD / hexagonal path is
+opt-in and never forced.
+
+### Standard Symfony host
+
+Nothing to configure beyond the profiles. Inject the bundle services where you need them:
+
+```php
+use Nowo\WhatsappBusinessBundle\Client\WhatsappClientInterface;
+use Nowo\WhatsappBusinessBundle\Client\WhatsappClientRegistryInterface;
+
+public function __construct(
+    private WhatsappClientInterface $whatsapp,          // the default profile
+    private WhatsappClientRegistryInterface $profiles,  // any profile by name
+) {
+}
+```
+
+Listen to the bundle events with `#[AsEventListener]` or a subscriber, send asynchronously by routing
+`SendOutgoingMessage` to a Messenger transport ([Messenger](#messenger)), and let the `cloud` transport talk to the
+Graph API. The webhook controller is the bundle's own HTTP adapter; the routes stay opt-in
+([CONFIGURATION.md](CONFIGURATION.md#webhooks)).
+
+### DDD / hexagonal host
+
+A host that keeps its domain free of framework types can use the bundle as a driven adapter behind its own port, and
+can replace the driving adapter:
+
+- **Everything the host touches is framework-free.** `WhatsappClientInterface`,
+  `WhatsappClientRegistryInterface` and `TransportInterface` take and return only the bundle's own value objects —
+  `OutgoingEnvelope`, `OutgoingMessage` (`TextMessage`, `TemplateMessage`, `MediaMessage`, `LocationMessage`,
+  `ReactionMessage`, `RawGraphMessage`, `GraphPayloadMessage`), `PhoneNumber`, `MediaSource`, `MediaId`,
+  `MediaDownload`, `MessageResult`, `MessageTemplate`, `CloudApiProfile` — plus scalars and arrays. No Doctrine type,
+  no `Request` / `Response`, no `UserInterface`, no `EntityManagerInterface` appears in any of their signatures
+  (REQ-ARCH-001 rule 3). The only framework packages in that surface are the interface-only
+  `symfony/*-contracts`, which the rule allows: the events extend `Symfony\Contracts\EventDispatcher\Event` and
+  `MockTransport` implements `Symfony\Contracts\Service\ResetInterface`.
+- **The events carry ids, not entities** (rule 4): `MessageSentEvent`, `MessageSendFailedEvent`,
+  `IncomingMessageEvent`, `StatusUpdateEvent` and `WebhookReceivedEvent` carry the profile **name** (a string) and
+  bundle value objects (`OutgoingEnvelope`, `MessageResult`, `IncomingMessage`, `StatusUpdate`,
+  `WebhookNotification`) or the bundle's own `GraphApiException`. Map them to your
+  own domain events in one application-layer listener; your domain never imports the bundle.
+- **Wrap the client behind your own port.** Declare the port in your domain
+  (`interface NotifiesByWhatsapp { public function notify(string $e164, string $text): string; }`) and implement it in
+  your infrastructure layer on top of `WhatsappClientInterface`. The bundle's value objects then stop at that
+  boundary.
+- **Replace the outbound adapter** (rule 5): implement `TransportInterface` and point the profile at it with
+  `transport_service` ([CONFIGURATION.md](CONFIGURATION.md#host-transport-transport_service)). The bundle keeps the
+  message building, the profile resolution, the events and the Messenger integration, and your implementation decides
+  how the message leaves the process — an on-premise gateway, a BSP other than Meta, a record-and-replay fake in
+  acceptance tests. `cloud` and `mock` stay available per profile.
+- **Configuration comes through the config tree** (rule 8), never from a database or InstanceSettings: `composer.json`
+  requires neither `doctrine/orm` nor `nowo-tech/instance-settings-bundle`.
+- **Worker mode (REQ-RUNTIME-002):** the ports are called on every send; nothing is memoised per request. A host
+  transport must be stateless as well — the bundle does not reset it.
+
+### What this bundle does not have
+
+Rules 2, 6 and 7 of REQ-ARCH-001 are **not applicable**: the bundle ships no entity, no `#[ORM\MappedSuperclass]`,
+no ORM trait and no table, it never touches an `EntityManager` (there is no `doctrine/*` package in `require`, and no
+`->flush()` anywhere in `src/`), and it opens no transaction — so there is no host unit of work to break and no
+"dispatch after commit" ordering to respect. Events are dispatched by the client right after the transport call and
+by the webhook controller after the payload is verified.

@@ -70,6 +70,7 @@ As a developer, I use the mock transport so no message leaves the machine and re
 - **FR-HTTP-002**: `WhatsappClient` / `WhatsappClientRegistry` expose typed sends, `sendRaw()`, media and template operations per named profile; unknown profiles raise `UnknownProfileException`.
 - **FR-HTTP-003**: Secrets are redacted from logs and dumps (`SecretRedactor`, `SensitiveDumpRegistrar`), and media download URLs are restricted to Meta hosts (`MediaDownloadUrlPolicy`).
 - **FR-HTTP-004**: `TransportInterface` with `CloudApiTransport` (real Graph) and `MockTransport` (demos/tests).
+- **FR-HTTP-005**: A host can serve a profile with its own `TransportInterface` implementation through `transport_service` (`transport: custom`), validated at compile time (REQ-ARCH-001 rule 5).
 
 ### Messages and templates (`FR-MSG-*`)
 

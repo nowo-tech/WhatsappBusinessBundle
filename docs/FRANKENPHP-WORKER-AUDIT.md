@@ -102,7 +102,7 @@ Rule 7 (host Doctrine): the bundle has no persistence and never touches the host
 - Configure at least one profile with `transport: cloud_api` in production. The built-in default profile uses the mock transport.
 - Keep `kernel.reset` / the services resetter enabled (the Symfony default); mock profiles no longer depend on it, but host services may.
 - Tune `timeout` and `connect_timeout` per profile to the lowest acceptable values, and cap waiting requests with FrankenPHP `max_wait_time`. For bulk sending, dispatch `SendOutgoingMessage` through Messenger so the HTTP worker does not block on Graph.
-- Custom `TransportInterface` implementations or event listeners on `MessageSentEvent` / `IncomingMessageEvent` must not store messages in properties, or must implement `ResetInterface` and bound what they keep.
+- Host `TransportInterface` implementations (`transport_service`, see [CONFIGURATION.md](CONFIGURATION.md#host-transport-transport_service)) and event listeners on `MessageSentEvent` / `IncomingMessageEvent` must not store messages in properties, or must implement `ResetInterface` and bound what they keep. The bundle **aliases** a host transport and never tags it `kernel.reset`, and `ResetMockTransportsOnRequestSubscriber` only resets `mock` profiles, so a host transport is responsible for its own per-request state — and under worker mode with `kernel.reset: false` the resetter does not run at all, so being stateless is the only safe shape. `CustomTransportBootTest::testHostTransportSurvivesAKeptAliveKernelWithoutReset` keeps one kernel alive for 550 sends through a host transport and asserts flat memory.
 - The demo in `demo/symfony8/` runs FrankenPHP in worker mode (`docker/frankenphp/Caddyfile` has a `worker` block).
 
 ## Re-audit triggers

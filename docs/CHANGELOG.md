@@ -22,6 +22,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Host transport (REQ-ARCH-001 rule 5):** a profile can be served by the host's own
+  `Nowo\WhatsappBusinessBundle\Transport\TransportInterface` implementation through the new per-profile
+  `transport_service` key, which names a service id and implies the new `transport: custom` value
+  (`TransportKind::Custom`). The bundle aliases the service as `nowo_whatsapp_business.transport.<profile>` and never
+  redefines, retags or decorates it; no `GraphApiClient` is built for a `custom` profile. The new
+  `TransportServicePass` fails the build when the id is unknown or its class does not implement the port, and the
+  configuration refuses `transport: custom` without `transport_service` and `transport_service` with any other
+  `transport`. `cloud` and `mock` keep their defaults, wiring and behaviour unchanged.
+
+### Documentation
+
+- `docs/USAGE.md`: "Host architecture: standard Symfony and DDD / hexagonal (REQ-ARCH-001)" — the standard host path,
+  the DDD / hexagonal host path (framework-free ports and events, wrapping the client behind a host port, replacing
+  the outbound adapter, config through the config tree) and the rules that are not applicable (no entity, no
+  `EntityManager`, no transaction). Linked from `README.md`.
+- `docs/CONFIGURATION.md`: `transport_service` row and a "Host transport" section with a worked implementation and the
+  worker-mode responsibilities; `docs/FRANKENPHP-WORKER-AUDIT.md` now states that the bundle does not reset a host
+  transport.
+
 ### Tests
 
 - `WorkerKeptAliveKernelTest`: one kept-alive kernel, 1000 signed webhooks through `http_kernel` as two tenants, no resetter, isolation and memory assertions (REQ-RUNTIME-002); `docs/FRANKENPHP-WORKER-AUDIT.md` refreshed.

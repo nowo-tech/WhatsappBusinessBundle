@@ -18,6 +18,43 @@
 
 ## Unreleased
 
+Nothing to do: the release is additive. Every existing configuration keeps its meaning and its behaviour.
+
+### New: plug your own transport (REQ-ARCH-001 rule 5)
+
+`transport` accepts a third value, `custom`, and every profile accepts a new `transport_service` key with the service
+id of a host `Nowo\WhatsappBusinessBundle\Transport\TransportInterface` implementation:
+
+```yaml
+nowo_whatsapp_business:
+    profiles:
+        gateway:
+            transport_service: App\Whatsapp\OnPremiseTransport
+            phone_number_id: '%env(WHATSAPP_PHONE_NUMBER_ID)%'
+            access_token: '%env(WHATSAPP_ACCESS_TOKEN)%'
+```
+
+- Setting `transport_service` is enough; `transport: custom` is inferred. The two contradictory combinations are
+  refused at configuration time (`transport: custom` with no service, `transport_service` with `cloud` / `mock`).
+- The service is **aliased** as `nowo_whatsapp_business.transport.<profile>`: the bundle never redefines, retags,
+  decorates or resets it, so `shared`, `public` and every other setting stay as you declared them.
+- A missing service id, or a class that does not implement `TransportInterface`, now fails the build with a message
+  naming the profile (new `TransportServicePass`, registered from `WhatsappBusinessBundle::build()`).
+- A `custom` profile builds no `GraphApiClient`, so it needs no `http_client`; `graph_version`, `graph_base_uri`,
+  `timeout` and `connect_timeout` are unused. `phone_number_id` and `access_token` are still required, since
+  `CloudApiProfile` carries them — use placeholders if your gateway does not need them.
+- **Worker mode:** the bundle does not reset a host transport (only `mock` profiles are reset per request). Keep your
+  implementation stateless; see [CONFIGURATION.md](CONFIGURATION.md#host-transport-transport_service).
+
+`cloud` and `mock` are untouched: same defaults, same wiring, same behaviour as 1.3.0.
+
+### Worth knowing
+
+- `Nowo\WhatsappBusinessBundle\Config\TransportKind` has a new case, `Custom`. Code that `match`es on it **without
+  a `default` arm** now has to handle it (`CloudApiProfile::$transport` is the only place the bundle exposes it).
+- Host architecture guidance (standard Symfony host and DDD / hexagonal host) is documented in
+  [USAGE.md](USAGE.md#host-architecture-standard-symfony-and-ddd--hexagonal-req-arch-001).
+
 ## To 1.3.0
 
 From **1.2.2**:

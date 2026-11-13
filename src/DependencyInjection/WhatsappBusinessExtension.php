@@ -10,6 +10,7 @@ use Nowo\WhatsappBusinessBundle\Client\WhatsappClientRegistry;
 use Nowo\WhatsappBusinessBundle\Client\WhatsappClientRegistryInterface;
 use Nowo\WhatsappBusinessBundle\Config\CloudApiProfile;
 use Nowo\WhatsappBusinessBundle\Config\TransportKind;
+use Nowo\WhatsappBusinessBundle\DependencyInjection\Compiler\TransportServicePass;
 use Nowo\WhatsappBusinessBundle\EventSubscriber\ResetMockTransportsOnRequestSubscriber;
 use Nowo\WhatsappBusinessBundle\Exception\UnknownProfileException;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiClient;
@@ -31,6 +32,7 @@ use function array_keys;
 use function class_exists;
 use function interface_exists;
 use function is_bool;
+use function is_string;
 use function sprintf;
 
 /**
@@ -41,6 +43,11 @@ use function sprintf;
  */
 final class WhatsappBusinessExtension extends Extension
 {
+    /**
+     * `[profile name => service id]` of the `custom` profiles, consumed and removed by {@see TransportServicePass}.
+     */
+    public const TRANSPORT_SERVICES_PARAMETER = 'nowo_whatsapp_business.transport_services';
+
     /**
      * Loads the bundle services and registers one profile, transport and client per configured profile.
      *
@@ -78,6 +85,18 @@ final class WhatsappBusinessExtension extends Extension
                 && $environment !== 'prod';
 
             $clientRefs[(string) $name] = new Reference($this->registerProfile($container, (string) $name, $profileConfig));
+        }
+
+        // Host transports (REQ-ARCH-001 rule 5): checked by TransportServicePass once every service is registered.
+        $customTransports = [];
+        foreach ($config['profiles'] as $name => $profileConfig) {
+            $serviceId = $profileConfig['transport_service'] ?? null;
+            if (TransportKind::from((string) $profileConfig['transport']) === TransportKind::Custom && is_string($serviceId) && $serviceId !== '') {
+                $customTransports[(string) $name] = $serviceId;
+            }
+        }
+        if ($customTransports !== []) {
+            $container->setParameter(self::TRANSPORT_SERVICES_PARAMETER, $customTransports);
         }
 
         $mockTransports = [];
@@ -173,12 +192,22 @@ final class WhatsappBusinessExtension extends Extension
         $profileDef->setPublic(false);
         $container->setDefinition($profileId, $profileDef);
 
+        $transportId   = sprintf('nowo_whatsapp_business.transport.%s', $name);
         $transportKind = TransportKind::from((string) $profileConfig['transport']);
-        if ($transportKind === TransportKind::Mock) {
+        if ($transportKind === TransportKind::Custom) {
+            // The host owns the service: it is aliased as-is, never redefined, retagged or reset by the bundle.
+            $serviceId = (string) $profileConfig['transport_service'];
+            if ($serviceId === $transportId) {
+                throw new InvalidConfigurationException(sprintf('nowo_whatsapp_business.profiles.%s.transport_service cannot be "%s" (the bundle transport id of the profile itself): name your own service.', $name, $serviceId));
+            }
+            $container->setAlias($transportId, $serviceId)->setPublic(false);
+        } elseif ($transportKind === TransportKind::Mock) {
             $transport = new Definition(MockTransport::class, [
                 '$profile' => new Reference($profileId),
             ]);
             $transport->addTag('kernel.reset', ['method' => 'reset']);
+            $transport->setPublic(false);
+            $container->setDefinition($transportId, $transport);
         } else {
             $graph = new Definition(GraphApiClient::class, [
                 '$httpClient' => new Reference('http_client'),
@@ -193,11 +222,9 @@ final class WhatsappBusinessExtension extends Extension
                 '$graph'   => new Reference($graphId),
                 '$profile' => new Reference($profileId),
             ]);
+            $transport->setPublic(false);
+            $container->setDefinition($transportId, $transport);
         }
-
-        $transportId = sprintf('nowo_whatsapp_business.transport.%s', $name);
-        $transport->setPublic(false);
-        $container->setDefinition($transportId, $transport);
 
         $client = new Definition(WhatsappClient::class, [
             '$profile'         => new Reference($profileId),
