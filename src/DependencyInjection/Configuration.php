@@ -112,6 +112,7 @@ final class Configuration implements ConfigurationInterface
                     ->defaultValue([
                         'default' => [
                             'transport'                    => 'mock',
+                            'transport_service'            => null,
                             'phone_number_id'              => 'demo-phone',
                             'access_token'                 => 'demo-token',
                             'whatsapp_business_account_id' => 'demo-waba',
