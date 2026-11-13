@@ -62,4 +62,102 @@ final class ConfigurationTest extends TestCase
             ],
         ]]);
     }
+
+    public function testDefaultProfileHasNoTransportService(): void
+    {
+        $config = (new Processor())->processConfiguration(new Configuration(), [[]]);
+        self::assertNull($config['profiles']['default']['transport_service']);
+    }
+
+    public function testTransportServiceAloneImpliesCustom(): void
+    {
+        $config = (new Processor())->processConfiguration(new Configuration(), [[
+            'profiles' => [
+                'default' => [
+                    'phone_number_id'   => '1',
+                    'access_token'      => 't',
+                    'transport_service' => 'app.my_transport',
+                ],
+            ],
+        ]]);
+
+        self::assertSame('custom', $config['profiles']['default']['transport']);
+        self::assertSame('app.my_transport', $config['profiles']['default']['transport_service']);
+    }
+
+    public function testExplicitCustomWithServiceIsAccepted(): void
+    {
+        $config = (new Processor())->processConfiguration(new Configuration(), [[
+            'profiles' => [
+                'default' => [
+                    'transport'         => 'custom',
+                    'phone_number_id'   => '1',
+                    'access_token'      => 't',
+                    'transport_service' => 'app.my_transport',
+                ],
+            ],
+        ]]);
+
+        self::assertSame('custom', $config['profiles']['default']['transport']);
+    }
+
+    public function testEmptyTransportServiceDoesNotImplyCustom(): void
+    {
+        $config = (new Processor())->processConfiguration(new Configuration(), [[
+            'profiles' => [
+                'default' => [
+                    'phone_number_id'   => '1',
+                    'access_token'      => 't',
+                    'transport_service' => '',
+                ],
+            ],
+        ]]);
+
+        self::assertSame('cloud', $config['profiles']['default']['transport']);
+    }
+
+    public function testCustomTransportWithoutServiceIsRefused(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('transport: custom requires transport_service');
+        (new Processor())->processConfiguration(new Configuration(), [[
+            'profiles' => [
+                'default' => [
+                    'transport'       => 'custom',
+                    'phone_number_id' => '1',
+                    'access_token'    => 't',
+                ],
+            ],
+        ]]);
+    }
+
+    public function testTransportServiceWithAnotherTransportIsRefused(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('transport_service is only used with transport: custom');
+        (new Processor())->processConfiguration(new Configuration(), [[
+            'profiles' => [
+                'default' => [
+                    'transport'         => 'mock',
+                    'phone_number_id'   => '1',
+                    'access_token'      => 't',
+                    'transport_service' => 'app.my_transport',
+                ],
+            ],
+        ]]);
+    }
+
+    public function testUnknownTransportIsRefused(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        (new Processor())->processConfiguration(new Configuration(), [[
+            'profiles' => [
+                'default' => [
+                    'transport'       => 'carrier-pigeon',
+                    'phone_number_id' => '1',
+                    'access_token'    => 't',
+                ],
+            ],
+        ]]);
+    }
 }

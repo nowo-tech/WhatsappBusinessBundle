@@ -4,6 +4,7 @@
 
 - [Named profiles](#named-profiles)
 - [Profile keys](#profile-keys)
+- [Host transport (`transport_service`)](#host-transport-transport_service)
 - [Environment variables](#environment-variables)
 - [Timeouts (REQ-RUNTIME-001)](#timeouts-req-runtime-001)
 - [Webhooks](#webhooks)
@@ -34,7 +35,8 @@ nowo_whatsapp_business:
 
 | Key | Default | Notes |
 | --- | ------- | ----- |
-| `transport` | `cloud` | `cloud` (Graph API) or `mock` (in-memory) |
+| `transport` | `cloud` | `cloud` (Graph API), `mock` (in-memory) or `custom` (the service in `transport_service`) |
+| `transport_service` | `null` | Service id of a host `TransportInterface`; setting it implies `transport: custom` ([below](#host-transport-transport_service)) |
 | `phone_number_id` | required | Cloud API sender phone number id |
 | `access_token` | required | Permanent / system-user token. **Never log or commit.** |
 | `whatsapp_business_account_id` | `null` | Required for `listTemplates()` |
@@ -45,6 +47,72 @@ nowo_whatsapp_business:
 | `app_secret` | `null` | HMAC key for `X-Hub-Signature-256` |
 | `webhook_verify_token` | `null` | GET `hub.verify_token` (the zero-config mock profile no longer ships `demo-verify`) |
 | `allow_unsigned_webhooks` | `false` | Demo only; literal boolean; with an empty `app_secret` it is refused unless `kernel.debug` is true (never in `prod`) |
+
+## Host transport (`transport_service`)
+
+Since **1.4** a profile can be served by the host's own transport instead of the Graph API or the in-memory mock
+(REQ-ARCH-001 rule 5). Implement `Nowo\WhatsappBusinessBundle\Transport\TransportInterface` — its signatures use
+only bundle value objects (`MediaId`, `MediaDownload`, `MessageTemplate`) and arrays, no framework types — and name
+the service:
+
+```yaml
+nowo_whatsapp_business:
+    profiles:
+        gateway:
+            transport_service: App\Whatsapp\OnPremiseTransport
+            phone_number_id: '%env(WHATSAPP_PHONE_NUMBER_ID)%'
+            access_token: '%env(WHATSAPP_ACCESS_TOKEN)%'
+```
+
+```php
+namespace App\Whatsapp;
+
+use Nowo\WhatsappBusinessBundle\Message\MediaDownload;
+use Nowo\WhatsappBusinessBundle\Message\MediaId;
+use Nowo\WhatsappBusinessBundle\Transport\TransportInterface;
+
+final readonly class OnPremiseTransport implements TransportInterface
+{
+    /**
+     * @param array<string, mixed> $graphBody
+     *
+     * @return array<string, mixed>
+     */
+    public function send(array $graphBody): array
+    {
+        // … your own gateway; return a Graph-shaped payload (messages[0].id at least).
+    }
+
+    public function markAsRead(string $messageId): void { /* … */ }
+
+    public function uploadMedia(string $filePath, string $mimeType): MediaId { /* … */ }
+
+    public function downloadMedia(string $mediaId): MediaDownload { /* … */ }
+
+    /** @return list<\Nowo\WhatsappBusinessBundle\Template\MessageTemplate> */
+    public function listTemplates(): array { /* … */ }
+}
+```
+
+Rules:
+
+- `transport_service` alone is enough: the profile becomes `custom` without repeating `transport: custom`. Writing both
+  is fine; `transport_service` with any other `transport` value is refused at configuration time, and `transport:
+  custom` without `transport_service` as well.
+- The service id is resolved at compile time. An unknown id, or a class that does not implement `TransportInterface`,
+  fails the build with a message naming the profile (`TransportServicePass`). A factory-built or synthetic definition
+  is left to the container's own type checks.
+- The bundle **aliases** the service, it never redefines, retags or decorates it: `shared` / `public` and every other
+  setting stay as the host declared them. The alias id is `nowo_whatsapp_business.transport.<profile>`.
+- No `GraphApiClient` is built for a `custom` profile, so it needs no `http_client` and `graph_version`,
+  `graph_base_uri`, `timeout` and `connect_timeout` are unused (they keep their defaults).
+- `phone_number_id` and `access_token` stay required (they are part of `CloudApiProfile`, which the bundle passes to
+  listeners and dumps). Use placeholders when your gateway does not need them — `access_token` is still redacted from
+  every dump and log.
+- **Worker mode (REQ-RUNTIME-002):** the bundle does **not** reset a host transport — only `mock` profiles get the
+  per-request reset. Your transport must keep nothing per request, or reset itself (a bundle `kernel.reset` tag is not
+  applied to host services, and under FrankenPHP with `kernel.reset: false` the resetter does not run at all).
+- `cloud` and `mock` are unchanged: the defaults, the wiring and the behaviour are exactly what they were before 1.4.
 
 ## Environment variables
 
