@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Transport SPI (REQ-ARCH-001 rule 5):** profile option `transport_service` (default `null`): the id of a host service implementing `Transport\TransportInterface`. The profile's `nowo_whatsapp_business.transport.<profile>` id then aliases it, no Graph client is built and no mock reset is registered for it. Default behaviour is unchanged.
+- `docs/ARCHITECTURE.md`: SPI and event table, and a "Standard Symfony and DDD hosts" section.
+
 ### Tests
 
 - `WorkerKeptAliveKernelTest`: one kept-alive kernel, 1000 signed webhooks through `http_kernel` as two tenants, no resetter, isolation and memory assertions (REQ-RUNTIME-002); `docs/FRANKENPHP-WORKER-AUDIT.md` refreshed.

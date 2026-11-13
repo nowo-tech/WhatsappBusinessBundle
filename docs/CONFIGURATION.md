@@ -35,6 +35,7 @@ nowo_whatsapp_business:
 | Key | Default | Notes |
 | --- | ------- | ----- |
 | `transport` | `cloud` | `cloud` (Graph API) or `mock` (in-memory) |
+| `transport_service` | `null` | Id of a host service implementing `Transport\TransportInterface`; replaces the built-in transport of the profile (SPI, see [ARCHITECTURE](ARCHITECTURE.md)). The host service owns its own reset between requests. |
 | `phone_number_id` | required | Cloud API sender phone number id |
 | `access_token` | required | Permanent / system-user token. **Never log or commit.** |
 | `whatsapp_business_account_id` | `null` | Required for `listTemplates()` |

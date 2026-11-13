@@ -19,6 +19,7 @@ final class ConfigurationTest extends TestCase
         self::assertSame('default', $config['default_profile']);
         self::assertSame('mock', $config['profiles']['default']['transport']);
         self::assertFalse($config['profiles']['default']['allow_unsigned_webhooks']);
+        self::assertNull($config['profiles']['default']['transport_service']);
     }
 
     public function testRejectsHttpGraphBase(): void

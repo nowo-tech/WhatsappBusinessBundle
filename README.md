@@ -121,6 +121,7 @@ Do not copy proprietary host code into this package. The public API is the integ
 - [Installation](docs/INSTALLATION.md)
 - [Configuration](docs/CONFIGURATION.md)
 - [Usage](docs/USAGE.md)
+- [Architecture, SPI and DDD hosts](docs/ARCHITECTURE.md)
 - [Contributing](docs/CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Changelog](docs/CHANGELOG.md)

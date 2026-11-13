@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.4.0](#to-140)
 - [To 1.3.0](#to-130)
 - [To 1.2.2](#to-122)
 - [To 1.2.1](#to-121)
@@ -17,6 +18,10 @@
 - [1.0.0](#100)
 
 ## Unreleased
+
+## To 1.4.0
+
+From **1.3.0**: no action. The new profile option `transport_service` defaults to `null` (built-in transport). Set it only to plug your own `TransportInterface` service for a profile; see [ARCHITECTURE](ARCHITECTURE.md).
 
 ## To 1.3.0
 

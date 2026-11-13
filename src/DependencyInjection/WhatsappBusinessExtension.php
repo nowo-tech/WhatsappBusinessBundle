@@ -18,6 +18,7 @@ use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -31,6 +32,7 @@ use function array_keys;
 use function class_exists;
 use function interface_exists;
 use function is_bool;
+use function is_string;
 use function sprintf;
 
 /**
@@ -82,7 +84,7 @@ final class WhatsappBusinessExtension extends Extension
 
         $mockTransports = [];
         foreach ($config['profiles'] as $name => $profileConfig) {
-            if (TransportKind::from((string) $profileConfig['transport']) === TransportKind::Mock) {
+            if ($this->customTransportService($profileConfig) === null && TransportKind::from((string) $profileConfig['transport']) === TransportKind::Mock) {
                 // Only already-instantiated transports are reset (same strategy as services_resetter).
                 $mockTransports[] = new Reference(
                     sprintf('nowo_whatsapp_business.transport.%s', $name),
@@ -138,6 +140,18 @@ final class WhatsappBusinessExtension extends Extension
     }
 
     /**
+     * Service id of the host transport configured for the profile, or null for the built-in transport.
+     *
+     * @param array<string, mixed> $profileConfig
+     */
+    private function customTransportService(array $profileConfig): ?string
+    {
+        $service = $profileConfig['transport_service'] ?? null;
+
+        return is_string($service) && $service !== '' ? $service : null;
+    }
+
+    /**
      * @param array<string, mixed> $profileConfig
      */
     private function registerProfile(ContainerBuilder $container, string $name, array $profileConfig): string
@@ -173,8 +187,12 @@ final class WhatsappBusinessExtension extends Extension
         $profileDef->setPublic(false);
         $container->setDefinition($profileId, $profileDef);
 
-        $transportKind = TransportKind::from((string) $profileConfig['transport']);
-        if ($transportKind === TransportKind::Mock) {
+        $transportKind   = TransportKind::from((string) $profileConfig['transport']);
+        $customTransport = $this->customTransportService($profileConfig);
+        if ($customTransport !== null) {
+            // SPI (REQ-ARCH-001 rule 5): the host's TransportInterface service replaces the built-in transport.
+            $transport = new Alias($customTransport, false);
+        } elseif ($transportKind === TransportKind::Mock) {
             $transport = new Definition(MockTransport::class, [
                 '$profile' => new Reference($profileId),
             ]);
@@ -196,8 +214,12 @@ final class WhatsappBusinessExtension extends Extension
         }
 
         $transportId = sprintf('nowo_whatsapp_business.transport.%s', $name);
-        $transport->setPublic(false);
-        $container->setDefinition($transportId, $transport);
+        if ($transport instanceof Alias) {
+            $container->setAlias($transportId, $transport);
+        } else {
+            $transport->setPublic(false);
+            $container->setDefinition($transportId, $transport);
+        }
 
         $client = new Definition(WhatsappClient::class, [
             '$profile'         => new Reference($profileId),
