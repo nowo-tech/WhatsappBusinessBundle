@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Nowo\WhatsappBusinessBundle\DependencyInjection;
 
+use Nowo\WhatsappBusinessBundle\Config\TransportKind;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
+use function array_key_exists;
+use function is_array;
 use function is_string;
 use function preg_match;
 use function str_starts_with;
@@ -39,11 +42,49 @@ final class Configuration implements ConfigurationInterface
                     ->requiresAtLeastOneElement()
                     ->useAttributeAsKey('name')
                     ->arrayPrototype()
+                        // A profile that only names a transport_service is a custom profile, so the host does not
+                        // have to repeat `transport: custom`. An explicit `transport` is never overwritten here;
+                        // the validations below refuse the contradictory combinations.
+                        ->beforeNormalization()
+                            ->ifTrue(static function ($v): bool {
+                                return is_array($v)
+                                    && !array_key_exists('transport', $v)
+                                    && is_string($v['transport_service'] ?? null)
+                                    && $v['transport_service'] !== '';
+                            })
+                            ->then(static function ($v): array {
+                                /** @var array<string, mixed> $profile */
+                                $profile              = $v;
+                                $profile['transport'] = TransportKind::Custom->value;
+
+                                return $profile;
+                            })
+                        ->end()
+                        ->validate()
+                            ->ifTrue(static function ($v): bool {
+                                return is_array($v)
+                                    && ($v['transport'] ?? null) === TransportKind::Custom->value
+                                    && (string) ($v['transport_service'] ?? '') === '';
+                            })
+                            ->thenInvalid('transport: custom requires transport_service (the service id of your Nowo\WhatsappBusinessBundle\Transport\TransportInterface implementation).')
+                        ->end()
+                        ->validate()
+                            ->ifTrue(static function ($v): bool {
+                                return is_array($v)
+                                    && ($v['transport'] ?? null) !== TransportKind::Custom->value
+                                    && (string) ($v['transport_service'] ?? '') !== '';
+                            })
+                            ->thenInvalid('transport_service is only used with transport: custom — set transport: custom, or omit transport so it is inferred.')
+                        ->end()
                         ->children()
                             ->enumNode('transport')
-                                ->info('cloud = Graph API; mock = in-memory (demos/tests)')
-                                ->values(['cloud', 'mock'])
+                                ->info('cloud = Graph API; mock = in-memory (demos/tests); custom = the service named in transport_service')
+                                ->values(['cloud', 'mock', 'custom'])
                                 ->defaultValue('cloud')
+                            ->end()
+                            ->scalarNode('transport_service')
+                                ->info('Service id of a host TransportInterface implementation; implies transport: custom (REQ-ARCH-001 rule 5)')
+                                ->defaultNull()
                             ->end()
                             ->scalarNode('phone_number_id')
                                 ->info('WhatsApp phone number id used as sender')
@@ -108,6 +149,7 @@ final class Configuration implements ConfigurationInterface
                     ->defaultValue([
                         'default' => [
                             'transport'                    => 'mock',
+                            'transport_service'            => null,
                             'phone_number_id'              => 'demo-phone',
                             'access_token'                 => 'demo-token',
                             'whatsapp_business_account_id' => 'demo-waba',

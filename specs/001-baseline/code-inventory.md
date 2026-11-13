@@ -11,9 +11,10 @@ Categorized `src/` map for WhatsappBusinessBundle; paths are relative to `src/`.
 | Source path | Spec section | Requirement IDs |
 | --- | --- | --- |
 | `Config/CloudApiProfile.php` | Named profile value object (HTTPS Graph base URI, business account) | FR-CFG-001, FR-ERR-001 |
-| `Config/TransportKind.php` | Transport enum (`cloud` / `mock`) | FR-CFG-001, FR-HTTP-004 |
+| `Config/TransportKind.php` | Transport enum (`cloud` / `mock` / `custom`) | FR-CFG-001, FR-HTTP-004, FR-HTTP-005 |
 | `DependencyInjection/Configuration.php` | Config tree `nowo_whatsapp_business` | FR-CFG-001 |
 | `DependencyInjection/WhatsappBusinessExtension.php` | DI extension | FR-CFG-002 |
+| `DependencyInjection/Compiler/TransportServicePass.php` | Checks the host transports of `custom` profiles | FR-HTTP-005 |
 | `Resources/config/console.yaml` | Console command wiring | FR-CFG-002, FR-ASYNC-002 |
 | `Resources/config/messenger.yaml` | Messenger handler wiring | FR-CFG-002, FR-ASYNC-001 |
 | `Resources/config/routing.yaml` | Webhook routes | FR-CFG-002, FR-HOOK-002 |
@@ -40,7 +41,7 @@ Categorized `src/` map for WhatsappBusinessBundle; paths are relative to `src/`.
 | `Http/SensitiveDumpRegistrar.php` | VarDumper casters hiding secrets | FR-HTTP-003 |
 | `Transport/CloudApiTransport.php` | Real Graph transport | FR-HTTP-004 |
 | `Transport/MockTransport.php` | Mock transport with bounded recordings | FR-HTTP-004, FR-RUN-001 |
-| `Transport/TransportInterface.php` | Transport contract | FR-HTTP-004 |
+| `Transport/TransportInterface.php` | Transport contract (host-pluggable SPI) | FR-HTTP-004, FR-HTTP-005 |
 
 ## Event subscribers
 

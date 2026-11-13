@@ -9,15 +9,19 @@ use Nowo\WhatsappBusinessBundle\Client\WhatsappClientInterface;
 use Nowo\WhatsappBusinessBundle\Client\WhatsappClientRegistry;
 use Nowo\WhatsappBusinessBundle\Client\WhatsappClientRegistryInterface;
 use Nowo\WhatsappBusinessBundle\Config\CloudApiProfile;
+use Nowo\WhatsappBusinessBundle\Config\TransportKind;
 use Nowo\WhatsappBusinessBundle\DependencyInjection\WhatsappBusinessExtension;
+use Nowo\WhatsappBusinessBundle\EventSubscriber\ResetMockTransportsOnRequestSubscriber;
 use Nowo\WhatsappBusinessBundle\Exception\UnknownProfileException;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiClient;
+use Nowo\WhatsappBusinessBundle\Tests\Support\HostTransport;
 use Nowo\WhatsappBusinessBundle\Transport\CloudApiTransport;
 use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
 use Symfony\Component\DependencyInjection\Compiler\MergeExtensionConfigurationPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
@@ -202,5 +206,90 @@ final class WhatsappBusinessExtensionTest extends TestCase
         $container->setParameter('kernel.debug', $debug);
 
         return $container;
+    }
+
+    public function testCustomProfileAliasesTheHostTransport(): void
+    {
+        $container = new ContainerBuilder();
+        $container->register('app.host_transport', HostTransport::class);
+        (new WhatsappBusinessExtension())->load([[
+            'profiles' => [
+                'default' => [
+                    'phone_number_id'   => '111',
+                    'access_token'      => 'REDACTED-TEST',
+                    'transport_service' => 'app.host_transport',
+                ],
+            ],
+        ]], $container);
+
+        self::assertFalse($container->hasDefinition('nowo_whatsapp_business.transport.default'));
+        self::assertTrue($container->hasAlias('nowo_whatsapp_business.transport.default'));
+        $alias = $container->getAlias('nowo_whatsapp_business.transport.default');
+        self::assertSame('app.host_transport', (string) $alias);
+        self::assertFalse($alias->isPublic());
+        // No Graph client is built for a host transport, and nothing resets it.
+        self::assertFalse($container->hasDefinition('nowo_whatsapp_business.graph.default'));
+        self::assertFalse($container->hasDefinition(ResetMockTransportsOnRequestSubscriber::class));
+        self::assertSame(TransportKind::Custom, $container->getDefinition('nowo_whatsapp_business.profile.default')->getArgument('$transport'));
+        self::assertSame(
+            ['default' => 'app.host_transport'],
+            $container->getParameter(WhatsappBusinessExtension::TRANSPORT_SERVICES_PARAMETER),
+        );
+    }
+
+    public function testMockAndCustomProfilesCoexistAndOnlyMocksAreReset(): void
+    {
+        $container = new ContainerBuilder();
+        $container->register('app.host_transport', HostTransport::class);
+        (new WhatsappBusinessExtension())->load([[
+            'default_profile' => 'demo',
+            'profiles'        => [
+                'demo' => [
+                    'transport'       => 'mock',
+                    'phone_number_id' => '111',
+                    'access_token'    => 'REDACTED-TEST',
+                ],
+                'host' => [
+                    'transport'         => 'custom',
+                    'phone_number_id'   => '222',
+                    'access_token'      => 'REDACTED-TEST',
+                    'transport_service' => 'app.host_transport',
+                ],
+            ],
+        ]], $container);
+
+        self::assertSame(MockTransport::class, $container->getDefinition('nowo_whatsapp_business.transport.demo')->getClass());
+        self::assertTrue($container->hasAlias('nowo_whatsapp_business.transport.host'));
+        $resets = $container->getDefinition(ResetMockTransportsOnRequestSubscriber::class)->getArgument('$transports');
+        self::assertInstanceOf(IteratorArgument::class, $resets);
+        self::assertCount(1, $resets->getValues());
+        self::assertSame(['default' => 'demo', 'profiles' => ['demo', 'host']], [
+            'default'  => $container->getParameter('nowo_whatsapp_business.default_profile'),
+            'profiles' => $container->getParameter('nowo_whatsapp_business.profiles'),
+        ]);
+        self::assertSame(['host' => 'app.host_transport'], $container->getParameter(WhatsappBusinessExtension::TRANSPORT_SERVICES_PARAMETER));
+    }
+
+    public function testCustomTransportCannotPointAtTheBundleTransportIdOfItsOwnProfile(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('transport_service cannot be "nowo_whatsapp_business.transport.default"');
+        (new WhatsappBusinessExtension())->load([[
+            'profiles' => [
+                'default' => [
+                    'phone_number_id'   => '111',
+                    'access_token'      => 'REDACTED-TEST',
+                    'transport_service' => 'nowo_whatsapp_business.transport.default',
+                ],
+            ],
+        ]], new ContainerBuilder());
+    }
+
+    public function testNoTransportServicesParameterWithoutCustomProfiles(): void
+    {
+        $container = new ContainerBuilder();
+        (new WhatsappBusinessExtension())->load([], $container);
+
+        self::assertFalse($container->hasParameter(WhatsappBusinessExtension::TRANSPORT_SERVICES_PARAMETER));
     }
 }
