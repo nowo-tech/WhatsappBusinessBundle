@@ -37,10 +37,12 @@ Validation:
 - The extension refuses a `transport_service` equal to the profile's own transport id, and records
   `[profile => service id]` for the compiler pass.
 - `DependencyInjection\Compiler\TransportServicePass` fails the container build when the service is not defined, its
-  class does not implement `TransportInterface`, it is (or aliases, at any depth) a `nowo_whatsapp_business.*` service
-  such as another profile's transport, or its class is the bundle's `CloudApiTransport` / `MockTransport`. Classes
-  unknown before compilation (factories, synthetic services) are left to the container's own type checks. `cloud` and
-  `mock` profiles are not touched.
+  class does not implement `TransportInterface`, it is (or leads to through aliases and child-definition parents, at
+  any depth) a `nowo_whatsapp_business.*` service such as another profile's transport, or it or any parent declares
+  the bundle's `CloudApiTransport` / `MockTransport` class. Classes unknown before compilation (factories, synthetic
+  services) are left to the container's own type checks. A host factory, decorator or delegating transport that
+  injects a bundle transport cannot be detected at compile time and is the host's responsibility. `cloud` and `mock`
+  profiles are not touched.
 - At runtime `WhatsappClient` holds a `custom` profile to the host contract: any non-`GraphApiException` throwable
   becomes `GraphApiException::hostTransportFailure()` and a response without `messages[0].id` becomes
   `GraphApiException::invalidSendResponse()`, both with `MessageSendFailedEvent` and the error log

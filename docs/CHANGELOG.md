@@ -47,10 +47,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Host transport hardening before 1.4.0 (audit PH; the `custom` transport is unreleased):
-  - **L-1:** `TransportServicePass` refuses a `transport_service` that is, or aliases at any depth, a
-    `nowo_whatsapp_business.*` service (for example another profile's `nowo_whatsapp_business.transport.<name>`), or
-    whose class is the bundle's `CloudApiTransport` / `MockTransport`. A `custom` profile could otherwise send through
-    another profile's live Cloud API token and phone number while its events reported its own name.
+  - **L-1 / N-1:** `TransportServicePass` refuses a `transport_service` that is, or leads to through aliases and
+    child-definition parents at any depth, a `nowo_whatsapp_business.*` service (for example another profile's
+    `nowo_whatsapp_business.transport.<name>`), or that declares the bundle's `CloudApiTransport` / `MockTransport`
+    class on itself or on any parent. A `custom` profile could otherwise send through another profile's live Cloud API
+    token and phone number while its events reported its own name. A host factory, decorator or delegating transport
+    that injects a bundle transport cannot be caught at compile time; `CONFIGURATION.md` documents it as the host's
+    responsibility (I-7).
   - **L-2:** for a `custom` profile, any `Throwable` from the host `send()` other than `GraphApiException` now
     dispatches `MessageSendFailedEvent` and writes the error log (never the token or the original message), and is
     rethrown as `GraphApiException::hostTransportFailure()` (status 0, retried by Messenger) — permanent when the host

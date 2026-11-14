@@ -14,6 +14,7 @@ use Nowo\WhatsappBusinessBundle\Transport\TransportInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
@@ -128,6 +129,74 @@ final class TransportServicePassTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('nowo_whatsapp_business.profiles.a.transport_service: the service "app.transport" is a "' . $class . '"');
         (new TransportServicePass())->process($container);
+    }
+
+    /**
+     * N-1 (delta PH): a child definition whose parent is another profile's bundle transport would inherit its class
+     * and its arguments (B's profile, token and Graph client).
+     */
+    public function testRefusesAChildDefinitionOfABundleService(): void
+    {
+        $container = $this->containerWith(['a' => 'app.t']);
+        $container->register('nowo_whatsapp_business.transport.b', CloudApiTransport::class);
+        $container->setDefinition('app.t', new ChildDefinition('nowo_whatsapp_business.transport.b'));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('the service "app.t" resolves to "nowo_whatsapp_business.transport.b", a service of this bundle');
+        (new TransportServicePass())->process($container);
+    }
+
+    public function testRefusesAChildDefinitionReachingABundleServiceThroughParentsAndAliases(): void
+    {
+        $container = $this->containerWith(['a' => 'app.alias']);
+        $container->register('nowo_whatsapp_business.transport.b', CloudApiTransport::class);
+        $container->setAlias('app.parent_alias', 'nowo_whatsapp_business.transport.b');
+        $container->setDefinition('app.middle', (new ChildDefinition('app.parent_alias'))->setAbstract(true));
+        $container->setDefinition('app.t', new ChildDefinition('app.middle'));
+        $container->setAlias('app.alias', 'app.t');
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('the service "app.alias" resolves to "nowo_whatsapp_business.transport.b", a service of this bundle');
+        (new TransportServicePass())->process($container);
+    }
+
+    /**
+     * @param class-string $class
+     */
+    #[DataProvider('bundleTransportClasses')]
+    public function testRefusesAChildOfAHostParentBuiltFromABundleTransportClass(string $class): void
+    {
+        $container = $this->containerWith(['a' => 'app.t']);
+        $container->register('app.parent', $class)->setAbstract(true)->setArguments(['$graph' => 'b-graph', '$profile' => 'b-profile']);
+        $container->setDefinition('app.t', new ChildDefinition('app.parent'));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('the service "app.t" is a "' . $class . '"');
+        (new TransportServicePass())->process($container);
+    }
+
+    public function testRefusesAChildThatOverridesTheClassOfABundleTransportParent(): void
+    {
+        $container = $this->containerWith(['a' => 'app.t']);
+        $container->register('app.parent', CloudApiTransport::class)->setAbstract(true);
+        $container->setDefinition('app.t', (new ChildDefinition('app.parent'))->setClass(HostTransport::class));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('the service "app.t" is a "' . CloudApiTransport::class . '"');
+        (new TransportServicePass())->process($container);
+    }
+
+    public function testAcceptsAChildOfAHostParentAndStopsOnAParentCycle(): void
+    {
+        $container = $this->containerWith(['a' => 'app.t', 'b' => 'app.loop']);
+        $container->register('app.parent', HostTransport::class)->setAbstract(true);
+        $container->setDefinition('app.t', new ChildDefinition('app.parent'));
+        $container->setDefinition('app.loop', new ChildDefinition('app.loop_parent'));
+        $container->setDefinition('app.loop_parent', new ChildDefinition('app.loop'));
+
+        (new TransportServicePass())->process($container);
+
+        self::assertTrue($container->hasDefinition('app.t'));
     }
 
     public function testLeavesAFactoryDefinitionToTheContainer(): void

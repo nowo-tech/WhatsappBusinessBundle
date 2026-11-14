@@ -105,10 +105,16 @@ Rules:
   fails the build with a message naming the profile (`TransportServicePass`). A factory-built or synthetic definition
   is left to the container's own type checks.
 - The service must be **yours**. An id under `nowo_whatsapp_business.` — such as another profile's
-  `nowo_whatsapp_business.transport.<name>` — or a host alias that leads to one (at any depth), and a service whose
-  class is the bundle's `CloudApiTransport` or `MockTransport`, fail the build: otherwise the profile would send
-  through the other profile's token and phone number while its events report its own name. To send as another
-  profile, use that profile; for a live Graph or in-memory profile, use `transport: cloud` or `transport: mock`.
+  `nowo_whatsapp_business.transport.<name>` — or a host alias or child definition (`parent:`) that leads to one at
+  any depth, and a service that declares the bundle's `CloudApiTransport` or `MockTransport` class on itself or on
+  any parent, fail the build: otherwise the profile would send through the other profile's token and phone number
+  while its events report its own name. To send as another profile, use that profile; for a live Graph or in-memory
+  profile, use `transport: cloud` or `transport: mock`.
+- What the build **cannot** catch is your own code handing a bundle transport over: a factory that returns one, a
+  decorator, or a delegating transport that injects `nowo_whatsapp_business.transport.<name>` (or a
+  `CloudApiTransport` built by hand) and forwards to it. The class the container sees is yours, so the check passes,
+  and the profile then sends with the other profile's credentials. Never wire a bundle transport into a host
+  transport; that responsibility is the host's.
 - The bundle **aliases** the service, it never redefines, retags or decorates it: `shared` / `public` and every other
   setting stay as the host declared them. The alias id is `nowo_whatsapp_business.transport.<profile>`.
 - No `GraphApiClient` is built for a `custom` profile, so it needs no `http_client` and `graph_version`,

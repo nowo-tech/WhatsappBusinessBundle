@@ -16,6 +16,7 @@ use Psr\EventDispatcher\EventDispatcherInterface as PsrEventDispatcherInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
+use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\Compiler\MergeExtensionConfigurationPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -94,7 +95,7 @@ final class CustomTransportBootTest extends TestCase
      */
     public function testACustomProfileCannotBorrowAnotherProfileTransport(): void
     {
-        foreach (['nowo_whatsapp_business.transport.b' => null, 'app.alias' => 'nowo_whatsapp_business.transport.b'] as $serviceId => $aliasTarget) {
+        foreach (['nowo_whatsapp_business.transport.b' => null, 'app.alias' => 'nowo_whatsapp_business.transport.b', 'app.child' => 'parent'] as $serviceId => $aliasTarget) {
             try {
                 $this->compile(
                     [
@@ -102,7 +103,10 @@ final class CustomTransportBootTest extends TestCase
                         'b' => ['phone_number_id' => 'pn-b', 'access_token' => 'tok-b', 'transport' => 'cloud'],
                     ],
                     static function (ContainerBuilder $container) use ($serviceId, $aliasTarget): void {
-                        if ($aliasTarget !== null) {
+                        if ($aliasTarget === 'parent') {
+                            // N-1 (delta PH): `app.child: { parent: nowo_whatsapp_business.transport.b }`.
+                            $container->setDefinition($serviceId, new ChildDefinition('nowo_whatsapp_business.transport.b'));
+                        } elseif ($aliasTarget !== null) {
                             $container->setAlias($serviceId, $aliasTarget);
                         }
                     },

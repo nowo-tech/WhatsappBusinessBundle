@@ -39,8 +39,8 @@ nowo_whatsapp_business:
 - The service is **aliased** as `nowo_whatsapp_business.transport.<profile>`: the bundle never redefines, retags,
   decorates or resets it, so `shared`, `public` and every other setting stay as you declared them.
 - A missing service id, a class that does not implement `TransportInterface`, a `nowo_whatsapp_business.*` id (such
-  as another profile's `nowo_whatsapp_business.transport.<name>`, directly or through your own alias) and a service
-  built from the bundle's `CloudApiTransport` / `MockTransport` fail the build with a message naming the profile (new
+  as another profile's `nowo_whatsapp_business.transport.<name>`, directly or through your own alias or `parent:`) and
+  a service that declares the bundle's `CloudApiTransport` / `MockTransport` class on itself or a parent fail the build with a message naming the profile (new
   `TransportServicePass`, registered from `WhatsappBusinessBundle::build()`).
 - Your `send()` must return a non-empty `messages[0].id` and report failures by throwing `GraphApiException`; any
   other exception, and a response without a message id, still dispatch `MessageSendFailedEvent`. Your transport
