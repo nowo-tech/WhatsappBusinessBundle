@@ -3,6 +3,9 @@
 ## Table of contents
 
 - [Unreleased](#unreleased)
+- [To 1.4.0](#to-140)
+  - [New: plug your own transport (REQ-ARCH-001 rule 5)](#new-plug-your-own-transport-req-arch-001-rule-5)
+  - [Worth knowing](#worth-knowing)
 - [To 1.3.0](#to-130)
 - [To 1.2.2](#to-122)
 - [To 1.2.1](#to-121)
@@ -17,6 +20,14 @@
 - [1.0.0](#100)
 
 ## Unreleased
+
+## To 1.4.0
+
+From **1.3.0**:
+
+```bash
+composer update nowo-tech/whatsapp-business-bundle
+```
 
 Nothing to do: this release (to 1.4.0) is additive. Every existing configuration keeps its meaning and its behaviour.
 

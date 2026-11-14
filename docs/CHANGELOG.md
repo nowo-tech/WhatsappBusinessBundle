@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Table of contents
 
 - [[Unreleased]](#unreleased)
+- [[1.4.0] - 2026-11-14](#140---2026-11-14)
 - [[1.3.0] - 2026-10-30](#130---2026-10-30)
 - [[1.2.2] - 2026-10-13](#122---2026-10-13)
 - [[1.2.1] - 2026-10-13](#121---2026-10-13)
@@ -21,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [[1.0.0] - 2026-08-24](#100---2026-08-24)
 
 ## [Unreleased]
+
+## [1.4.0] - 2026-11-14
 
 ### Added
 
@@ -95,6 +98,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Dependencies
 
 - Dev tooling only, no runtime change: Symfony security release 2026-11-04 (lockfile), `rector/rector` 2.8.3, PHPStan group, `friendsofphp/php-cs-fixer` 3.95.28; composer platform pinned to the PHP floor (8.2) and Dependabot constraints widened, PHPUnit 12+ ignored while the floor is 8.2.
+
+[1.4.0]: https://github.com/nowo-tech/WhatsappBusinessBundle/releases/tag/v1.4.0
 
 ## [1.3.0] - 2026-10-30
 
