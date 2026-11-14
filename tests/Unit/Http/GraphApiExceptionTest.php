@@ -7,6 +7,8 @@ namespace Nowo\WhatsappBusinessBundle\Tests\Unit\Http;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
 
 #[CoversClass(GraphApiException::class)]
 final class GraphApiExceptionTest extends TestCase
@@ -52,5 +54,35 @@ final class GraphApiExceptionTest extends TestCase
         $e = GraphApiException::fromGraph([], 500);
         self::assertSame('WhatsApp Cloud API request failed.', $e->getMessage());
         self::assertNull($e->graphCode);
+    }
+
+    public function testPermanenceFollowsTheHttpStatus(): void
+    {
+        self::assertTrue(GraphApiException::fromGraph([], 400)->isPermanent());
+        self::assertTrue(GraphApiException::fromGraph([], 499)->isPermanent());
+        self::assertFalse(GraphApiException::fromGraph([], 429)->isPermanent());
+        self::assertFalse(GraphApiException::fromGraph([], 500)->isPermanent());
+        self::assertFalse(GraphApiException::transportFailure()->isPermanent());
+        self::assertFalse(GraphApiException::fromGraph([], 399)->isPermanent());
+    }
+
+    public function testHostTransportFailureKeepsThePreviousButNotItsMessage(): void
+    {
+        $previous = new RuntimeException('token EAAG-leak-me');
+        $e        = GraphApiException::hostTransportFailure($previous);
+        self::assertSame(0, $e->httpStatus);
+        self::assertSame($previous, $e->getPrevious());
+        self::assertFalse($e->isPermanent());
+        self::assertSame('WhatsApp host transport failed (RuntimeException).', $e->getMessage());
+
+        self::assertTrue(GraphApiException::hostTransportFailure(new UnrecoverableMessageHandlingException('x'))->isPermanent());
+    }
+
+    public function testInvalidSendResponseIsPermanent(): void
+    {
+        $e = GraphApiException::invalidSendResponse();
+        self::assertSame(0, $e->httpStatus);
+        self::assertTrue($e->isPermanent());
+        self::assertSame('WhatsApp transport response has no message id.', $e->getMessage());
     }
 }

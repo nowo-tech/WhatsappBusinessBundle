@@ -116,6 +116,7 @@ framework:
 - The handler does **not** retry by itself and does not swallow errors. Transient failures — `GraphApiException` with HTTP 429, 5xx or status `0` (transport failure / timeout) — are rethrown, so Messenger applies the transport `retry_strategy` and finally moves the message to `failure_transport`.
 - `MessageSendFailedEvent` is dispatched for every failed attempt (`GraphApiException` carries `httpStatus`, `graphCode`, `subcode`, `fbtraceId`; tokens are redacted).
 - Permanent errors — Graph 4xx other than 429 (invalid recipient, template not approved, …) and `UnknownProfileException` — are wrapped in Symfony `UnrecoverableMessageHandlingException` (the original exception is `getPrevious()`): no retry, straight to the failure transport.
+- Host transports (`transport_service`) follow the same rule through `GraphApiException::isPermanent()`: a host exception that is not a `GraphApiException` is retried (status `0`) unless it implements Messenger's `UnrecoverableExceptionInterface`, and a response without a message id is permanent. See [CONFIGURATION.md](CONFIGURATION.md#contract-of-a-host-transport).
 - Inspect / replay failures with `bin/console messenger:failed:show` and `messenger:failed:retry`.
 
 ### Idempotency
@@ -206,7 +207,10 @@ can replace the driving adapter:
   `transport_service` ([CONFIGURATION.md](CONFIGURATION.md#host-transport-transport_service)). The bundle keeps the
   message building, the profile resolution, the events and the Messenger integration, and your implementation decides
   how the message leaves the process — an on-premise gateway, a BSP other than Meta, a record-and-replay fake in
-  acceptance tests. `cloud` and `mock` stay available per profile.
+  acceptance tests. `cloud` and `mock` stay available per profile. Your implementation must return a non-empty
+  `messages[0].id`, throw `GraphApiException` to choose between retry and permanent failure, and do its own media-id
+  and download-URL checks ([contract](CONFIGURATION.md#contract-of-a-host-transport)). One service named by several
+  profiles is one shared instance with no profile context unless it implements `ProfileAwareTransportInterface`.
 - **Configuration comes through the config tree** (rule 8), never from a database or InstanceSettings: `composer.json`
   requires neither `doctrine/orm` nor `nowo-tech/instance-settings-bundle`.
 - **Worker mode (REQ-RUNTIME-002):** the ports are called on every send; nothing is memoised per request. A host

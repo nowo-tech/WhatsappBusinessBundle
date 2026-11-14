@@ -34,9 +34,10 @@ final readonly class SendOutgoingMessageHandler
     /**
      * Sends the queued envelope with the requested profile.
      *
-     * Unknown profiles and permanent Graph 4xx errors (except 429) are wrapped in
-     * UnrecoverableMessageHandlingException (no retry, straight to the failure transport); 429, 5xx and
-     * transport failures are rethrown so Messenger retries them.
+     * Unknown profiles and permanent failures ({@see GraphApiException::isPermanent()}: Graph 4xx except 429, a host
+     * transport exception implementing Messenger's UnrecoverableExceptionInterface, a host response without a
+     * message id) are wrapped in UnrecoverableMessageHandlingException (no retry, straight to the failure transport);
+     * 429, 5xx and transport failures (status 0, any other host exception) are rethrown so Messenger retries them.
      */
     public function __invoke(SendOutgoingMessage $message): MessageResult
     {
@@ -45,9 +46,9 @@ final readonly class SendOutgoingMessageHandler
         } catch (UnknownProfileException $exception) {
             throw new UnrecoverableMessageHandlingException($exception->getMessage(), 0, $exception);
         } catch (GraphApiException $exception) {
-            // Permanent Graph errors (4xx except 429) never succeed on retry; 429, 5xx and transport failures
-            // (status 0) are rethrown so the transport retry_strategy applies.
-            if ($exception->httpStatus >= 400 && $exception->httpStatus < 500 && $exception->httpStatus !== 429) {
+            // Permanent failures never succeed on retry; 429, 5xx and transport failures (status 0) are rethrown so
+            // the transport retry_strategy applies.
+            if ($exception->isPermanent()) {
                 throw new UnrecoverableMessageHandlingException($exception->getMessage(), $exception->httpStatus, $exception);
             }
 

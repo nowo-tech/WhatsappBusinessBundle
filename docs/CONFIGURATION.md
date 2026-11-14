@@ -5,6 +5,7 @@
 - [Named profiles](#named-profiles)
 - [Profile keys](#profile-keys)
 - [Host transport (`transport_service`)](#host-transport-transport_service)
+  - [Contract of a host transport](#contract-of-a-host-transport)
 - [Environment variables](#environment-variables)
 - [Timeouts (REQ-RUNTIME-001)](#timeouts-req-runtime-001)
 - [Webhooks](#webhooks)
@@ -80,7 +81,8 @@ final readonly class OnPremiseTransport implements TransportInterface
      */
     public function send(array $graphBody): array
     {
-        // … your own gateway; return a Graph-shaped payload (messages[0].id at least).
+        // … your own gateway; return a Graph-shaped payload with a non-empty messages[0].id, or throw
+        // GraphApiException (see "Contract of a host transport" below).
     }
 
     public function markAsRead(string $messageId): void { /* … */ }
@@ -102,6 +104,17 @@ Rules:
 - The service id is resolved at compile time. An unknown id, or a class that does not implement `TransportInterface`,
   fails the build with a message naming the profile (`TransportServicePass`). A factory-built or synthetic definition
   is left to the container's own type checks.
+- The service must be **yours**. An id under `nowo_whatsapp_business.` — such as another profile's
+  `nowo_whatsapp_business.transport.<name>` — or a host alias or child definition (`parent:`) that leads to one at
+  any depth, and a service that declares the bundle's `CloudApiTransport` or `MockTransport` class on itself or on
+  any parent, fail the build: otherwise the profile would send through the other profile's token and phone number
+  while its events report its own name. To send as another profile, use that profile; for a live Graph or in-memory
+  profile, use `transport: cloud` or `transport: mock`.
+- What the build **cannot** catch is your own code handing a bundle transport over: a factory that returns one, a
+  decorator, or a delegating transport that injects `nowo_whatsapp_business.transport.<name>` (or a
+  `CloudApiTransport` built by hand) and forwards to it. The class the container sees is yours, so the check passes,
+  and the profile then sends with the other profile's credentials. Never wire a bundle transport into a host
+  transport; that responsibility is the host's.
 - The bundle **aliases** the service, it never redefines, retags or decorates it: `shared` / `public` and every other
   setting stay as the host declared them. The alias id is `nowo_whatsapp_business.transport.<profile>`.
 - No `GraphApiClient` is built for a `custom` profile, so it needs no `http_client` and `graph_version`,
@@ -113,6 +126,57 @@ Rules:
   per-request reset. Your transport must keep nothing per request, or reset itself (a bundle `kernel.reset` tag is not
   applied to host services, and under FrankenPHP with `kernel.reset: false` the resetter does not run at all).
 - `cloud` and `mock` are unchanged: the defaults, the wiring and the behaviour are exactly what they were before 1.4.
+
+### Contract of a host transport
+
+**Successful send.** `send()` must return a Graph-shaped payload with a non-empty string `messages[0].id`
+(`contacts[].wa_id` is optional). A response without it — `[]` included — is a failed send: the client throws
+`GraphApiException::invalidSendResponse()` (status `0`), dispatches `MessageSendFailedEvent` and logs
+"WhatsApp send failed.", and no `MessageSentEvent` fires. The failure is **permanent** (no Messenger retry), since
+your gateway may already have delivered the message.
+
+**Failures.** Throw `Nowo\WhatsappBusinessBundle\Http\GraphApiException` (its constructor and its factories are
+public). The HTTP status you give it decides what Messenger does with a queued `SendOutgoingMessage`:
+
+| What `send()` throws | `GraphApiException::isPermanent()` | `SendOutgoingMessageHandler` |
+| -------------------- | ---------------------------------- | ---------------------------- |
+| `GraphApiException` with status `0` (network, timeout), `429` or `5xx` | `false` | rethrown, so the transport `retry_strategy` applies |
+| `GraphApiException` with any other `4xx` | `true` | wrapped in `UnrecoverableMessageHandlingException` (no retry, straight to the failure transport) |
+| Anything implementing Messenger's `UnrecoverableExceptionInterface` | `true` | wrapped in `UnrecoverableMessageHandlingException` |
+| Any other `Throwable` | `false` | rethrown as `GraphApiException::hostTransportFailure()` (status `0`), so retried |
+
+Every case dispatches `MessageSendFailedEvent` and writes the same "WhatsApp send failed." error log as a Graph error
+(profile, masked recipient, message type, status, Graph code, `permanent`; never the token). A non-Graph exception is
+kept as `getPrevious()` of the `GraphApiException`, but its message is not copied into the bundle's exception or log;
+keep secrets out of your own exception messages anyway, since the failure transport stores the whole chain.
+`cloud` and `mock` profiles keep their own error handling.
+
+**Input checks.** The media-id format check and the media download URL allow-list (`MediaDownloadUrlPolicy`, the
+SSRF guard) live inside `CloudApiTransport` and `GraphApiClient`. A host transport does not get them:
+`WhatsappClient::downloadMedia()` and `markAsRead()` pass the raw id straight to it. Validate media ids and message
+ids, and allow-list every URL you fetch, in your own `uploadMedia()` / `downloadMedia()` / `markAsRead()`.
+
+**One service, several profiles.** Naming the same service in two profiles gives both profiles **one shared
+instance**, and `TransportInterface` carries no profile, so the service cannot tell which profile is sending. Either
+declare one service per profile, or implement `Nowo\WhatsappBusinessBundle\Transport\ProfileAwareTransportInterface`
+(since 1.4): each profile's client calls `forProfile(string $profile): TransportInterface` once, when it is built,
+and sends through the transport it returns. That transport lives as long as the container (worker included), so keep
+it stateless too.
+
+```php
+final readonly class GatewayTransportFactory implements ProfileAwareTransportInterface
+{
+    public function __construct(private GatewayClient $gateway) {}
+
+    public function forProfile(string $profile): TransportInterface
+    {
+        return new GatewayTransport($this->gateway, sender: $profile);
+    }
+
+    // send(), markAsRead(), uploadMedia(), downloadMedia(), listTemplates(): never called through WhatsappClient
+    // once a profile is bound; throw a LogicException or delegate to a default sender.
+}
+```
 
 ## Environment variables
 

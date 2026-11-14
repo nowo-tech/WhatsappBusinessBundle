@@ -8,9 +8,13 @@ use LogicException;
 use Nowo\WhatsappBusinessBundle\DependencyInjection\Compiler\TransportServicePass;
 use Nowo\WhatsappBusinessBundle\DependencyInjection\WhatsappBusinessExtension;
 use Nowo\WhatsappBusinessBundle\Tests\Support\HostTransport;
+use Nowo\WhatsappBusinessBundle\Transport\CloudApiTransport;
+use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
 use Nowo\WhatsappBusinessBundle\Transport\TransportInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
@@ -64,6 +68,135 @@ final class TransportServicePassTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('must implement "' . TransportInterface::class . '"');
         (new TransportServicePass())->process($container);
+    }
+
+    /**
+     * L-1 (audit PH): a custom profile must never reach another profile's bundle-internal transport (its token, its
+     * phone number), neither directly nor through a host alias.
+     */
+    public function testRefusesAnotherProfileBundleTransport(): void
+    {
+        $container = $this->containerWith(['a' => 'nowo_whatsapp_business.transport.b']);
+        $container->register('nowo_whatsapp_business.transport.b', CloudApiTransport::class);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('nowo_whatsapp_business.profiles.a.transport_service: the service "nowo_whatsapp_business.transport.b" resolves to "nowo_whatsapp_business.transport.b", a service of this bundle');
+        (new TransportServicePass())->process($container);
+    }
+
+    public function testRefusesAHostAliasToABundleService(): void
+    {
+        $container = $this->containerWith(['a' => 'app.transport']);
+        $container->register('nowo_whatsapp_business.transport.b', MockTransport::class);
+        $container->setAlias('app.inner', 'nowo_whatsapp_business.transport.b');
+        $container->setAlias('app.transport', 'app.inner');
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('the service "app.transport" resolves to "nowo_whatsapp_business.transport.b", a service of this bundle');
+        (new TransportServicePass())->process($container);
+    }
+
+    public function testRefusesAnAliasToAnotherCustomProfile(): void
+    {
+        // b is itself custom: its bundle alias points at a host service, but a still must name that host service.
+        $container = $this->containerWith(['a' => 'nowo_whatsapp_business.transport.b', 'b' => 'app.host_transport']);
+        $container->register('app.host_transport', HostTransport::class);
+        $container->setAlias('nowo_whatsapp_business.transport.b', 'app.host_transport');
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('profiles.a.transport_service: the service "nowo_whatsapp_business.transport.b" resolves to "nowo_whatsapp_business.transport.b", a service of this bundle');
+        (new TransportServicePass())->process($container);
+    }
+
+    /**
+     * @return iterable<string, array{class-string}>
+     */
+    public static function bundleTransportClasses(): iterable
+    {
+        yield 'cloud' => [CloudApiTransport::class];
+        yield 'mock' => [MockTransport::class];
+    }
+
+    /**
+     * @param class-string $class
+     */
+    #[DataProvider('bundleTransportClasses')]
+    public function testRefusesAHostServiceBuiltFromABundleTransportClass(string $class): void
+    {
+        $container = $this->containerWith(['a' => 'app.transport']);
+        $container->register('app.transport', $class);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('nowo_whatsapp_business.profiles.a.transport_service: the service "app.transport" is a "' . $class . '"');
+        (new TransportServicePass())->process($container);
+    }
+
+    /**
+     * N-1 (delta PH): a child definition whose parent is another profile's bundle transport would inherit its class
+     * and its arguments (B's profile, token and Graph client).
+     */
+    public function testRefusesAChildDefinitionOfABundleService(): void
+    {
+        $container = $this->containerWith(['a' => 'app.t']);
+        $container->register('nowo_whatsapp_business.transport.b', CloudApiTransport::class);
+        $container->setDefinition('app.t', new ChildDefinition('nowo_whatsapp_business.transport.b'));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('the service "app.t" resolves to "nowo_whatsapp_business.transport.b", a service of this bundle');
+        (new TransportServicePass())->process($container);
+    }
+
+    public function testRefusesAChildDefinitionReachingABundleServiceThroughParentsAndAliases(): void
+    {
+        $container = $this->containerWith(['a' => 'app.alias']);
+        $container->register('nowo_whatsapp_business.transport.b', CloudApiTransport::class);
+        $container->setAlias('app.parent_alias', 'nowo_whatsapp_business.transport.b');
+        $container->setDefinition('app.middle', (new ChildDefinition('app.parent_alias'))->setAbstract(true));
+        $container->setDefinition('app.t', new ChildDefinition('app.middle'));
+        $container->setAlias('app.alias', 'app.t');
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('the service "app.alias" resolves to "nowo_whatsapp_business.transport.b", a service of this bundle');
+        (new TransportServicePass())->process($container);
+    }
+
+    /**
+     * @param class-string $class
+     */
+    #[DataProvider('bundleTransportClasses')]
+    public function testRefusesAChildOfAHostParentBuiltFromABundleTransportClass(string $class): void
+    {
+        $container = $this->containerWith(['a' => 'app.t']);
+        $container->register('app.parent', $class)->setAbstract(true)->setArguments(['$graph' => 'b-graph', '$profile' => 'b-profile']);
+        $container->setDefinition('app.t', new ChildDefinition('app.parent'));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('the service "app.t" is a "' . $class . '"');
+        (new TransportServicePass())->process($container);
+    }
+
+    public function testRefusesAChildThatOverridesTheClassOfABundleTransportParent(): void
+    {
+        $container = $this->containerWith(['a' => 'app.t']);
+        $container->register('app.parent', CloudApiTransport::class)->setAbstract(true);
+        $container->setDefinition('app.t', (new ChildDefinition('app.parent'))->setClass(HostTransport::class));
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('the service "app.t" is a "' . CloudApiTransport::class . '"');
+        (new TransportServicePass())->process($container);
+    }
+
+    public function testAcceptsAChildOfAHostParentAndStopsOnAParentCycle(): void
+    {
+        $container = $this->containerWith(['a' => 'app.t', 'b' => 'app.loop']);
+        $container->register('app.parent', HostTransport::class)->setAbstract(true);
+        $container->setDefinition('app.t', new ChildDefinition('app.parent'));
+        $container->setDefinition('app.loop', new ChildDefinition('app.loop_parent'));
+        $container->setDefinition('app.loop_parent', new ChildDefinition('app.loop'));
+
+        (new TransportServicePass())->process($container);
+
+        self::assertTrue($container->hasDefinition('app.t'));
     }
 
     public function testLeavesAFactoryDefinitionToTheContainer(): void

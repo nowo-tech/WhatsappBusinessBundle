@@ -4,7 +4,7 @@
 |-------|-------|
 | Package | `nowo-tech/whatsapp-business-bundle` (`symfony-bundle`) |
 | Audited revision | pre-`v1.1.1` (worker hardening on top of `v1.1.0` / `fd82ed9`) |
-| Reviewed version | `v1.3.0` (2026-11-12 review: `git diff v1.3.0 -- src` is empty at this commit) |
+| Reviewed version | `1.4.0` (unreleased; 2026-11-14 review of `git diff v1.3.0 -- src`: the host transport (`transport_service`, `TransportKind::Custom`, `TransportServicePass`) and its hardening (`ProfileAwareTransportInterface`, host failure / response contract in `WhatsappClient`). No new per-request state: `WhatsappClient` stays `readonly`, a profile-aware host transport is bound once when the client is built, and the compile-time `transport_services` parameter never reaches the compiled container) |
 | Audit date | 2026-09-23 (reconfirmed 2026-09-25 for release) |
 | Method | Manual review of every file under `src/` (clients, transports, Graph HTTP client, webhook controller, Messenger handler, commands, DI extension, `Resources/config/*.yaml`) |
 | Remediation (2026-09-23) | W-01 resolved (mock transport cleared per main request + bounded); W-02 and W-03 accepted |
@@ -99,10 +99,10 @@ Rule 7 (host Doctrine): the bundle has no persistence and never touches the host
 
 ## Usage recommendations in worker mode
 
-- Configure at least one profile with `transport: cloud_api` in production. The built-in default profile uses the mock transport.
+- Configure at least one profile with `transport: cloud` (or a host transport through `transport_service`) in production. The built-in default profile uses the mock transport.
 - Keep `kernel.reset` / the services resetter enabled (the Symfony default); mock profiles no longer depend on it, but host services may.
 - Tune `timeout` and `connect_timeout` per profile to the lowest acceptable values, and cap waiting requests with FrankenPHP `max_wait_time`. For bulk sending, dispatch `SendOutgoingMessage` through Messenger so the HTTP worker does not block on Graph.
-- Host `TransportInterface` implementations (`transport_service`, see [CONFIGURATION.md](CONFIGURATION.md#host-transport-transport_service)) and event listeners on `MessageSentEvent` / `IncomingMessageEvent` must not store messages in properties, or must implement `ResetInterface` and bound what they keep. The bundle **aliases** a host transport and never tags it `kernel.reset`, and `ResetMockTransportsOnRequestSubscriber` only resets `mock` profiles, so a host transport is responsible for its own per-request state — and under worker mode with `kernel.reset: false` the resetter does not run at all, so being stateless is the only safe shape. `CustomTransportBootTest::testHostTransportSurvivesAKeptAliveKernelWithoutReset` keeps one kernel alive for 550 sends through a host transport and asserts flat memory.
+- Host `TransportInterface` implementations (`transport_service`, see [CONFIGURATION.md](CONFIGURATION.md#host-transport-transport_service)) and event listeners on `MessageSentEvent` / `IncomingMessageEvent` must not store messages in properties, or must implement `ResetInterface` and bound what they keep. The bundle **aliases** a host transport and never tags it `kernel.reset`, and `ResetMockTransportsOnRequestSubscriber` only resets `mock` profiles, so a host transport is responsible for its own per-request state — and under worker mode with `kernel.reset: false` the resetter does not run at all, so being stateless is the only safe shape. `CustomTransportBootTest::testHostTransportSurvivesAKeptAliveKernelWithoutReset` keeps one kernel alive for 550 sends through a host transport and asserts flat memory. A `ProfileAwareTransportInterface` implementation is asked for its per-profile transport once, when each profile's client is built; the transport it returns lives as long as the worker, so it must be stateless as well.
 - The demo in `demo/symfony8/` runs FrankenPHP in worker mode (`docker/frankenphp/Caddyfile` has a `worker` block).
 
 ## Re-audit triggers

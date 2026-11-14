@@ -15,12 +15,14 @@ use Nowo\WhatsappBusinessBundle\Message\PhoneNumber;
 use Nowo\WhatsappBusinessBundle\Message\TextMessage;
 use Nowo\WhatsappBusinessBundle\Messenger\SendOutgoingMessage;
 use Nowo\WhatsappBusinessBundle\Messenger\SendOutgoingMessageHandler;
+use Nowo\WhatsappBusinessBundle\Tests\Support\ScriptedHostTransport;
 use Nowo\WhatsappBusinessBundle\Tests\Unit\Support\ProfileFactory;
 use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
 use Nowo\WhatsappBusinessBundle\Transport\TransportInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
 
 #[CoversClass(SendOutgoingMessageHandler::class)]
@@ -113,5 +115,52 @@ final class SendOutgoingMessageHandlerTest extends TestCase
             self::assertFalse($unrecoverable);
             self::assertSame($status, $exception->httpStatus);
         }
+    }
+
+    /**
+     * L-2 (audit PH): an arbitrary host exception is transient (Messenger retries it as a GraphApiException with
+     * status 0); a host exception implementing Messenger's UnrecoverableExceptionInterface is permanent.
+     */
+    public function testHostTransportExceptionsMapToMessengerRetries(): void
+    {
+        $original = new RuntimeException('gateway timeout');
+        try {
+            $this->handlerFor(new ScriptedHostTransport(static fn (array $body): never => throw $original))($this->queued());
+            self::fail('GraphApiException expected.');
+        } catch (GraphApiException $exception) {
+            self::assertSame(0, $exception->httpStatus);
+            self::assertSame($original, $exception->getPrevious());
+        }
+
+        try {
+            $this->handlerFor(new ScriptedHostTransport(static fn (array $body): never => throw new UnrecoverableMessageHandlingException('blocked')))($this->queued());
+            self::fail('UnrecoverableMessageHandlingException expected.');
+        } catch (UnrecoverableMessageHandlingException $exception) {
+            self::assertInstanceOf(GraphApiException::class, $exception->getPrevious());
+        }
+    }
+
+    /**
+     * L-3 (audit PH): a host response without a message id is never retried (the gateway may have sent it).
+     */
+    public function testHostResponseWithoutMessageIdIsPermanent(): void
+    {
+        try {
+            $this->handlerFor(new ScriptedHostTransport(static fn (array $body): array => []))($this->queued());
+            self::fail('UnrecoverableMessageHandlingException expected.');
+        } catch (UnrecoverableMessageHandlingException $exception) {
+            self::assertInstanceOf(GraphApiException::class, $exception->getPrevious());
+            self::assertSame(0, $exception->getCode());
+        }
+    }
+
+    private function handlerFor(TransportInterface $transport): SendOutgoingMessageHandler
+    {
+        return new SendOutgoingMessageHandler(new WhatsappClientRegistry(['default' => new WhatsappClient(ProfileFactory::custom(), $transport)], 'default'));
+    }
+
+    private function queued(): SendOutgoingMessage
+    {
+        return new SendOutgoingMessage(new OutgoingEnvelope(PhoneNumber::parse('34611111111'), new TextMessage('hi')));
     }
 }
