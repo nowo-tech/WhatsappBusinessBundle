@@ -6,15 +6,19 @@ namespace Nowo\WhatsappBusinessBundle\DependencyInjection\Compiler;
 
 use LogicException;
 use Nowo\WhatsappBusinessBundle\DependencyInjection\WhatsappBusinessExtension;
+use Nowo\WhatsappBusinessBundle\Transport\CloudApiTransport;
+use Nowo\WhatsappBusinessBundle\Transport\MockTransport;
 use Nowo\WhatsappBusinessBundle\Transport\TransportInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
+use function array_key_last;
 use function class_exists;
 use function is_a;
 use function is_array;
 use function is_string;
 use function sprintf;
+use function str_starts_with;
 
 /**
  * Checks the host transports of the `custom` profiles (REQ-ARCH-001 rule 5): the service named in
@@ -26,6 +30,11 @@ use function sprintf;
  * known before compilation (a factory, a synthetic or a decorated definition) is left to the container's own type
  * checks, exactly like AuthKit's port pass.
  *
+ * A custom profile must name a host service. A target that is, or aliases (at any depth), a service of this bundle
+ * (`nowo_whatsapp_business.*`, such as another profile's `nowo_whatsapp_business.transport.<name>`), or whose class is
+ * the bundle's own {@see CloudApiTransport} / {@see MockTransport}, fails the build: otherwise the profile would send
+ * through another profile's token and phone number while its events report its own name.
+ *
  * `cloud` and `mock` profiles are not touched.
  *
  * @internal
@@ -35,6 +44,8 @@ use function sprintf;
  */
 final class TransportServicePass implements CompilerPassInterface
 {
+    private const BUNDLE_SERVICE_PREFIX = 'nowo_whatsapp_business.';
+
     /**
      * Validates every custom transport declared by the extension.
      *
@@ -62,7 +73,8 @@ final class TransportServicePass implements CompilerPassInterface
     }
 
     /**
-     * @throws LogicException when the service is missing or does not implement {@see TransportInterface}
+     * @throws LogicException when the service is missing, does not implement {@see TransportInterface} or is a
+     *                        transport of this bundle
      */
     private function assertTransport(ContainerBuilder $container, string $profile, string $serviceId): void
     {
@@ -70,23 +82,51 @@ final class TransportServicePass implements CompilerPassInterface
             throw new LogicException(sprintf('nowo_whatsapp_business.profiles.%s.transport_service names the service "%s", which is not defined.', $profile, $serviceId));
         }
 
-        $class = $this->classOf($container, $serviceId);
-        if ($class !== null && !is_a($class, TransportInterface::class, true)) {
+        $chain = $this->aliasChain($container, $serviceId);
+        foreach ($chain as $id) {
+            if (str_starts_with($id, self::BUNDLE_SERVICE_PREFIX)) {
+                throw new LogicException(sprintf('nowo_whatsapp_business.profiles.%s.transport_service: the service "%s" resolves to "%s", a service of this bundle. Name a host service: a custom profile cannot send through another profile\'s transport, token or phone number.', $profile, $serviceId, $id));
+            }
+        }
+
+        $class = $this->classOf($container, $chain[array_key_last($chain)]);
+        if ($class === null) {
+            return;
+        }
+        if (!is_a($class, TransportInterface::class, true)) {
             throw new LogicException(sprintf('nowo_whatsapp_business.profiles.%s.transport_service: the service "%s" (%s) must implement "%s".', $profile, $serviceId, $class, TransportInterface::class));
         }
+        foreach ([CloudApiTransport::class, MockTransport::class] as $bundleTransport) {
+            if (is_a($class, $bundleTransport, true)) {
+                throw new LogicException(sprintf('nowo_whatsapp_business.profiles.%s.transport_service: the service "%s" is a "%s", a transport of this bundle. Use `transport: cloud` or `transport: mock` on the profile instead.', $profile, $serviceId, $class));
+            }
+        }
+    }
+
+    /**
+     * Returns $serviceId followed by every alias target up to the final id (stops on a cycle).
+     *
+     * @return non-empty-list<string>
+     */
+    private function aliasChain(ContainerBuilder $container, string $serviceId): array
+    {
+        $chain = [$serviceId];
+        $id    = $serviceId;
+        $seen  = [];
+        while ($container->hasAlias($id) && !isset($seen[$id])) {
+            $seen[$id] = true;
+            $id        = (string) $container->getAlias($id);
+            $chain[]   = $id;
+        }
+
+        return $chain;
     }
 
     /**
      * @return class-string|null null when the class cannot be known before the container is compiled
      */
-    private function classOf(ContainerBuilder $container, string $serviceId): ?string
+    private function classOf(ContainerBuilder $container, string $id): ?string
     {
-        $id   = $serviceId;
-        $seen = [];
-        while ($container->hasAlias($id) && !isset($seen[$id])) {
-            $seen[$id] = true;
-            $id        = (string) $container->getAlias($id);
-        }
         if (!$container->hasDefinition($id)) {
             return null;
         }

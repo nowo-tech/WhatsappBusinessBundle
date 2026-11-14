@@ -32,9 +32,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TransportServicePass` fails the build when the id is unknown or its class does not implement the port, and the
   configuration refuses `transport: custom` without `transport_service` and `transport_service` with any other
   `transport`. `cloud` and `mock` keep their defaults, wiring and behaviour unchanged.
+- `Nowo\WhatsappBusinessBundle\Transport\ProfileAwareTransportInterface` (optional): one host service named by several
+  `custom` profiles is bound to each profile through `forProfile(string $profile)`, called once when the profile's
+  client is built (audit PH I-1).
+- `GraphApiException::isPermanent()`, `GraphApiException::hostTransportFailure()` and
+  `GraphApiException::invalidSendResponse()`; the constructor takes optional `$previous` and `$permanent` arguments.
+
+### Changed
+
+- `SendOutgoingMessageHandler` classifies failures with `GraphApiException::isPermanent()` (same outcome as before for
+  Graph errors: 4xx except 429 permanent, status 0 / 429 / 5xx retried).
+- The "WhatsApp send failed." log context and the `GraphApiException` dump have a new `permanent` key.
+
+### Fixed
+
+- Host transport hardening before 1.4.0 (audit PH; the `custom` transport is unreleased):
+  - **L-1:** `TransportServicePass` refuses a `transport_service` that is, or aliases at any depth, a
+    `nowo_whatsapp_business.*` service (for example another profile's `nowo_whatsapp_business.transport.<name>`), or
+    whose class is the bundle's `CloudApiTransport` / `MockTransport`. A `custom` profile could otherwise send through
+    another profile's live Cloud API token and phone number while its events reported its own name.
+  - **L-2:** for a `custom` profile, any `Throwable` from the host `send()` other than `GraphApiException` now
+    dispatches `MessageSendFailedEvent` and writes the error log (never the token or the original message), and is
+    rethrown as `GraphApiException::hostTransportFailure()` (status 0, retried by Messenger) — permanent when the host
+    exception implements Messenger's `UnrecoverableExceptionInterface`.
+  - **L-3:** for a `custom` profile, a response without a non-empty string `messages[0].id` (such as `[]`) is a failed
+    send (`GraphApiException::invalidSendResponse()`, permanent, failure event and log) instead of a success with an
+    empty id. `cloud` and `mock` responses are handled exactly as before.
 
 ### Documentation
 
+- `docs/CONFIGURATION.md` "Contract of a host transport": the response contract, which exception to throw and how it
+  maps to Messenger retries, the media-id and download-URL checks a host transport must do itself (audit PH I-2), and
+  one service shared by several profiles (I-1). `USAGE.md`, `ARCHITECTURE.md` and `UPGRADING.md` link to it;
+  `UPGRADING.md` clarifies when `TransportKind::Custom` reaches host code and that `!== Mock` checks treat `custom` as
+  live (I-6). `FRANKENPHP-WORKER-AUDIT.md` reviewed against the 1.4.0 source diff and `transport: cloud_api` corrected
+  to `transport: cloud` (I-5).
 - `docs/USAGE.md`: "Host architecture: standard Symfony and DDD / hexagonal (REQ-ARCH-001)" — the standard host path,
   the DDD / hexagonal host path (framework-free ports and events, wrapping the client behind a host port, replacing
   the outbound adapter, config through the config tree) and the rules that are not applicable (no entity, no
@@ -46,6 +78,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+- Audit PH regression tests: `TransportServicePassTest` (bundle ids, host alias chains, bundle transport classes),
+  `CustomTransportBootTest` (cross-profile transport refused at compile time; one profile-aware service serving two
+  profiles), `WhatsappClientTest` and `SendOutgoingMessageHandlerTest` (host exceptions, responses without a message id,
+  Messenger retry mapping, Cloud unchanged), `GraphApiExceptionTest`.
 - `WorkerKeptAliveKernelTest`: one kept-alive kernel, 1000 signed webhooks through `http_kernel` as two tenants, no resetter, isolation and memory assertions (REQ-RUNTIME-002); `docs/FRANKENPHP-WORKER-AUDIT.md` refreshed.
 
 ### CI

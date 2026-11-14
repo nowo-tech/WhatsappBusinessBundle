@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\WhatsappBusinessBundle\Client;
 
 use Nowo\WhatsappBusinessBundle\Config\CloudApiProfile;
+use Nowo\WhatsappBusinessBundle\Config\TransportKind;
 use Nowo\WhatsappBusinessBundle\Event\MessageSendFailedEvent;
 use Nowo\WhatsappBusinessBundle\Event\MessageSentEvent;
 use Nowo\WhatsappBusinessBundle\Http\GraphApiException;
@@ -19,28 +20,43 @@ use Nowo\WhatsappBusinessBundle\Message\PhoneNumber;
 use Nowo\WhatsappBusinessBundle\Message\RawGraphMessage;
 use Nowo\WhatsappBusinessBundle\Message\TemplateMessage;
 use Nowo\WhatsappBusinessBundle\Message\TextMessage;
+use Nowo\WhatsappBusinessBundle\Transport\ProfileAwareTransportInterface;
 use Nowo\WhatsappBusinessBundle\Transport\TransportInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Throwable;
 
 /**
  * Default client: transport + events + redacted logs.
+ *
+ * For a `custom` profile (host transport) every send failure is reported like a Graph failure: anything the host
+ * throws becomes a {@see GraphApiException} (see {@see GraphApiException::hostTransportFailure()}) and a response
+ * without `messages[0].id` is a failure ({@see GraphApiException::invalidSendResponse()}). `cloud` and `mock`
+ * profiles keep their behaviour.
  *
  * @author Héctor Franco Aceituno <hectorfranco@nowo.tech>
  * @copyright 2026 Nowo.tech
  */
 final readonly class WhatsappClient implements WhatsappClientInterface
 {
+    private TransportInterface $transport;
+
     /**
      * Creates the client for one profile on top of its transport, optional event dispatcher and logger.
+     *
+     * A {@see ProfileAwareTransportInterface} is bound to this profile once, here (one host service can serve
+     * several profiles).
      */
     public function __construct(
         private CloudApiProfile $profile,
-        private TransportInterface $transport,
+        TransportInterface $transport,
         private ?EventDispatcherInterface $eventDispatcher = null,
         private LoggerInterface $logger = new NullLogger(),
     ) {
+        $this->transport = $transport instanceof ProfileAwareTransportInterface
+            ? $transport->forProfile($profile->name)
+            : $transport;
     }
 
     /**
@@ -59,16 +75,18 @@ final readonly class WhatsappClient implements WhatsappClientInterface
         $body = $envelope->toGraphBody();
 
         try {
-            $payload = $this->transport->send($body);
-            $result  = MessageResult::fromGraph($payload);
+            $result = $this->profile->transport === TransportKind::Custom
+                ? $this->sendThroughHost($body)
+                : MessageResult::fromGraph($this->transport->send($body));
         } catch (GraphApiException $exception) {
             $this->eventDispatcher?->dispatch(new MessageSendFailedEvent($this->profile->name, $envelope, $exception));
             $this->logger->error('WhatsApp send failed.', [
-                'profile' => $this->profile->name,
-                'to'      => $envelope->to->masked(),
-                'type'    => $envelope->message->type()->value,
-                'http'    => $exception->httpStatus,
-                'code'    => $exception->graphCode,
+                'profile'   => $this->profile->name,
+                'to'        => $envelope->to->masked(),
+                'type'      => $envelope->message->type()->value,
+                'http'      => $exception->httpStatus,
+                'code'      => $exception->graphCode,
+                'permanent' => $exception->isPermanent(),
             ]);
             throw $exception;
         }
@@ -80,6 +98,29 @@ final readonly class WhatsappClient implements WhatsappClientInterface
             'type'       => $envelope->message->type()->value,
             'message_id' => $result->messageId,
         ]);
+
+        return $result;
+    }
+
+    /**
+     * Sends through a host transport and enforces its contract (audit PH L-2 / L-3).
+     *
+     * @param array<string, mixed> $body
+     *
+     * @throws GraphApiException for every host failure and for a response without a message id
+     */
+    private function sendThroughHost(array $body): MessageResult
+    {
+        try {
+            $result = MessageResult::fromGraph($this->transport->send($body));
+        } catch (GraphApiException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            throw GraphApiException::hostTransportFailure($exception);
+        }
+        if ($result->messageId === '') {
+            throw GraphApiException::invalidSendResponse();
+        }
 
         return $result;
     }

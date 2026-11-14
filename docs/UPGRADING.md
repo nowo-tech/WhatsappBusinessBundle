@@ -38,8 +38,15 @@ nowo_whatsapp_business:
   refused at configuration time (`transport: custom` with no service, `transport_service` with `cloud` / `mock`).
 - The service is **aliased** as `nowo_whatsapp_business.transport.<profile>`: the bundle never redefines, retags,
   decorates or resets it, so `shared`, `public` and every other setting stay as you declared them.
-- A missing service id, or a class that does not implement `TransportInterface`, now fails the build with a message
-  naming the profile (new `TransportServicePass`, registered from `WhatsappBusinessBundle::build()`).
+- A missing service id, a class that does not implement `TransportInterface`, a `nowo_whatsapp_business.*` id (such
+  as another profile's `nowo_whatsapp_business.transport.<name>`, directly or through your own alias) and a service
+  built from the bundle's `CloudApiTransport` / `MockTransport` fail the build with a message naming the profile (new
+  `TransportServicePass`, registered from `WhatsappBusinessBundle::build()`).
+- Your `send()` must return a non-empty `messages[0].id` and report failures by throwing `GraphApiException`; any
+  other exception, and a response without a message id, still dispatch `MessageSendFailedEvent`. Your transport
+  validates its own media ids and download URLs. One service shared by two profiles is one instance with no profile
+  context, unless it implements the new `ProfileAwareTransportInterface`. See
+  [CONFIGURATION.md](CONFIGURATION.md#contract-of-a-host-transport).
 - A `custom` profile builds no `GraphApiClient`, so it needs no `http_client`; `graph_version`, `graph_base_uri`,
   `timeout` and `connect_timeout` are unused. `phone_number_id` and `access_token` are still required, since
   `CloudApiProfile` carries them — use placeholders if your gateway does not need them.
@@ -51,7 +58,14 @@ nowo_whatsapp_business:
 ### Worth knowing
 
 - `Nowo\WhatsappBusinessBundle\Config\TransportKind` has a new case, `Custom`. Code that `match`es on it **without
-  a `default` arm** now has to handle it (`CloudApiProfile::$transport` is the only place the bundle exposes it).
+  a `default` arm** has to handle it, but only fails once a profile is actually configured with `transport_service`
+  (`CloudApiProfile::$transport` is the only place the bundle exposes it, and existing configurations never produce
+  `Custom`). Static analysis flags the missing arm earlier. Note too that a check written as
+  `if ($profile->transport !== TransportKind::Mock) { /* live */ }` silently treats a `custom` profile as live Graph
+  traffic; compare against `TransportKind::Cloud` when you mean the Cloud API.
+- `GraphApiException` has a new `isPermanent()` method and two optional constructor arguments (`$previous`,
+  `$permanent`); `SendOutgoingMessageHandler` now uses `isPermanent()`, which gives the same result as before for
+  every Graph and Cloud error.
 - Host architecture guidance (standard Symfony host and DDD / hexagonal host) is documented in
   [USAGE.md](USAGE.md#host-architecture-standard-symfony-and-ddd--hexagonal-req-arch-001).
 

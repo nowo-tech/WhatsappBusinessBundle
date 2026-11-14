@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Nowo\WhatsappBusinessBundle\Http;
 
 use Nowo\WhatsappBusinessBundle\Exception\WhatsappBusinessException;
+use Symfony\Component\Messenger\Exception\UnrecoverableExceptionInterface;
+use Throwable;
 
 use function is_array;
 use function is_int;
@@ -12,6 +14,10 @@ use function is_string;
 
 /**
  * Graph API error envelope. Messages and dumped state never include access tokens.
+ *
+ * It is also the failure contract of every transport, host transports included: {@see self::isPermanent()} tells the
+ * Messenger handler whether a retry can ever succeed (4xx except 429, a host exception implementing Messenger's
+ * `UnrecoverableExceptionInterface`, or a send response without a message id) or not (status 0, 429, 5xx).
  *
  * @author Héctor Franco Aceituno <hectorfranco@nowo.tech>
  * @copyright 2026 Nowo.tech
@@ -26,6 +32,8 @@ final class GraphApiException extends WhatsappBusinessException
     /**
      * Creates the exception; the message and the raw payload are redacted.
      *
+     * `$permanent` (since 1.4) marks a failure that no retry can fix even though its status is not a 4xx.
+     *
      * @param array<string, mixed> $raw
      */
     public function __construct(
@@ -35,9 +43,51 @@ final class GraphApiException extends WhatsappBusinessException
         public readonly ?int $subcode,
         public readonly ?string $fbtraceId,
         array $raw,
+        ?Throwable $previous = null,
+        private readonly bool $permanent = false,
     ) {
         $this->raw = SecretRedactor::redactArray($raw);
-        parent::__construct(SecretRedactor::redactString($message), $httpStatus);
+        parent::__construct(SecretRedactor::redactString($message), $httpStatus, $previous);
+    }
+
+    /**
+     * Whether a retry can never succeed: Graph 4xx except 429, or a failure created as permanent.
+     *
+     * Status 0 (network / timeout / host transport failure), 429 and 5xx are transient.
+     */
+    public function isPermanent(): bool
+    {
+        return $this->permanent || ($this->httpStatus >= 400 && $this->httpStatus < 500 && $this->httpStatus !== 429);
+    }
+
+    /**
+     * Wraps anything other than a GraphApiException thrown by a host transport (`transport: custom`).
+     *
+     * The previous exception is kept for the host's own diagnostics, but its message is not copied (it may carry
+     * secrets). The failure is transient (status 0, retried by Messenger) unless the host exception implements
+     * Messenger's `UnrecoverableExceptionInterface`.
+     */
+    public static function hostTransportFailure(Throwable $previous): self
+    {
+        return new self(
+            'WhatsApp host transport failed (' . $previous::class . ').',
+            0,
+            null,
+            null,
+            null,
+            [],
+            $previous,
+            $previous instanceof UnrecoverableExceptionInterface,
+        );
+    }
+
+    /**
+     * A host transport answered a send without `messages[0].id`. Permanent: the gateway may already have sent the
+     * message, so a retry could deliver it twice.
+     */
+    public static function invalidSendResponse(): self
+    {
+        return new self('WhatsApp transport response has no message id.', 0, null, null, null, [], null, true);
     }
 
     /**
@@ -116,6 +166,7 @@ final class GraphApiException extends WhatsappBusinessException
             'graphCode'  => $this->graphCode,
             'subcode'    => $this->subcode,
             'fbtraceId'  => $this->fbtraceId,
+            'permanent'  => $this->isPermanent(),
             'raw'        => '[omitted]',
         ];
     }
