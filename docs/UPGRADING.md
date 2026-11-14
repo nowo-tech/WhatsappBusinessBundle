@@ -18,7 +18,7 @@
 
 ## Unreleased
 
-Nothing to do: the release is additive. Every existing configuration keeps its meaning and its behaviour.
+Nothing to do: this release (to 1.4.0) is additive. Every existing configuration keeps its meaning and its behaviour.
 
 ### New: plug your own transport (REQ-ARCH-001 rule 5)
 

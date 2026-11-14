@@ -121,6 +121,7 @@ Do not copy proprietary host code into this package. The public API is the integ
 - [Installation](docs/INSTALLATION.md)
 - [Configuration](docs/CONFIGURATION.md)
 - [Usage](docs/USAGE.md)
+  - [Architecture, SPI and DDD hosts](docs/ARCHITECTURE.md)
   - [Host architecture: standard Symfony and DDD / hexagonal (REQ-ARCH-001)](docs/USAGE.md#host-architecture-standard-symfony-and-ddd--hexagonal-req-arch-001)
 - [Contributing](docs/CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
