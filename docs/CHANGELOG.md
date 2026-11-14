@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/CONFIGURATION.md`: `transport_service` row and a "Host transport" section with a worked implementation and the
   worker-mode responsibilities; `docs/FRANKENPHP-WORKER-AUDIT.md` now states that the bundle does not reset a host
   transport.
+- `docs/ARCHITECTURE.md`: ports and extension points (SPI) including `transport_service` and `TransportKind`, the event table and the standard Symfony / DDD host sections. Linked from `README.md`.
 
 ### Tests
 
@@ -50,6 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### CI
 
 - Igor FrankenPHP worker-state audit job (`composer igor`, REQ-CS-008).
+- Claude co-author baseline re-pointed after the history rewrite (git hygiene only).
+
+### Dependencies
+
+- Dev tooling only, no runtime change: Symfony security release 2026-11-04 (lockfile), `rector/rector` 2.8.3, PHPStan group, `friendsofphp/php-cs-fixer` 3.95.28; composer platform pinned to the PHP floor (8.2) and Dependabot constraints widened, PHPUnit 12+ ignored while the floor is 8.2.
 
 ## [1.3.0] - 2026-10-30
 
