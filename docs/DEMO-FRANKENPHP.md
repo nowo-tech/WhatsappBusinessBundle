@@ -10,6 +10,7 @@ Demos under `demo/symfony8` run on **FrankenPHP** with Caddy.
 - [Worker compatibility](#worker-compatibility)
 - [Timeouts (REQ-RUNTIME-001)](#timeouts-req-runtime-001)
 - [Run](#run)
+- [Demo smoke (REQ-TEST-011)](#demo-smoke-req-test-011)
 - [Start the demo in development](#start-the-demo-in-development)
 - [Start the demo in production mode](#start-the-demo-in-production-mode)
 - [Troubleshooting](#troubleshooting)
@@ -59,6 +60,13 @@ make -C demo up-symfony8
 ```
 
 Open the URL printed by `make up` (`Demo started at: http://localhost:<PORT>`).
+
+## Demo smoke (REQ-TEST-011)
+
+`make demo-smoke` (bundle root) boots the stack, waits until the app answers, requests the home page
+`http://127.0.0.1:<PORT>/` (`PORT` from `demo/symfony8/.env`, default 8031) and expects **HTTP 200**, then stops the
+stack (`make -C demo release-verify`). The same command runs in the `Demo smoke` GitHub workflow
+(`.github/workflows/demo-smoke.yml`): weekly on Mondays, on every `v*` tag and on demand. `make release-check` also boots the demo (`release-check-demos`).
 
 ## Start the demo in development
 

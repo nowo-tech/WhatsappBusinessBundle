@@ -23,6 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Demo: `nowo-tech/ui-kit-bundle` and `nowo-tech/form-kit-bundle` are required by the demo; the page renders in UiKit's admin layout (masthead, page header, cards, default theme, no CSS framework) and the send form is a FormKit form (profile `demo`) instead of a plain `AbstractType` with a hand-written `<button>` (REQ-DEMO-014, REQ-DEMO-015).
+
+### Added
+
+- `.github/workflows/demo-smoke.yml` (weekly, on `v*` tags and on demand) runs `make demo-smoke`; the smoke URL and command are documented in `docs/DEMO-FRANKENPHP.md` (REQ-TEST-011).
+
+### Documentation
+
+- Spec Kit baseline maps `Transport/ProfileAwareTransportInterface.php` (FR-HTTP-006; inventory 62/62) (REQ-SPECKIT-001/003).
+
 ## [1.4.0] - 2026-11-14
 
 ### Added
