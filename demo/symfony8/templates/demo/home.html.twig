@@ -2,33 +2,50 @@
 
 {% block title %}WhatsApp Business Bundle — Demo{% endblock %}
 
+{% block nowo_ui_page_header %}
+    {{ include(nowo_ui_partial('page_header'), {
+        title: 'WhatsappBusinessBundle',
+        intro: 'FrankenPHP worker-safe Cloud API client',
+    }) }}
+{% endblock %}
+
 {% block body %}
-    <h1>WhatsappBusinessBundle</h1>
-    <p><span class="badge">{{ version_badge }}</span> · FrankenPHP worker-safe Cloud API client</p>
+    <p>
+        <span class="nowo-ui-badge nowo-ui-badge--neutral">{{ version_badge }}</span>
+    </p>
 
     <p>
         Profile timeouts (REQ-RUNTIME-001):
-        <code>timeout={{ timeout }}s</code>,
-        <code>connect_timeout={{ connect_timeout }}s</code>,
-        <code>transport={{ transport }}</code>
+        <code class="nowo-ui-code">timeout={{ timeout }}s</code>,
+        <code class="nowo-ui-code">connect_timeout={{ connect_timeout }}s</code>,
+        <code class="nowo-ui-code">transport={{ transport }}</code>
     </p>
 
-    {{ form_start(form) }}
-        {% for child in form %}
-            {% if not child.rendered %}
-                {{ form_row(child) }}
-            {% endif %}
-        {% endfor %}
-        <button type="submit">Send text (mock)</button>
-    {{ form_end(form) }}
+    <section class="nowo-ui-card">
+        <div class="nowo-ui-card__body">
+            {{ form_start(form) }}
+                {% for child in form %}
+                    {% if not child.rendered %}
+                        {{ form_row(child) }}
+                    {% endif %}
+                {% endfor %}
+            {{ form_end(form) }}
+        </div>
+    </section>
 
     {% if message_id %}
-        <h2>Result</h2>
-        <p>Message id: <code>{{ message_id }}</code></p>
+        <section class="nowo-ui-card" data-testid="demo-result">
+            <div class="nowo-ui-card__header"><h2>Result</h2></div>
+            <div class="nowo-ui-card__body">
+                <p>Message id: <code class="nowo-ui-code">{{ message_id }}</code></p>
+            </div>
+        </section>
     {% endif %}
 
-    <section>
-        <h2>Webhook</h2>
-        <p>GET/POST <code>/whatsapp/webhook</code> (unsigned allowed in this mock demo).</p>
+    <section class="nowo-ui-card">
+        <div class="nowo-ui-card__header"><h2>Webhook</h2></div>
+        <div class="nowo-ui-card__body">
+            <p>GET/POST <code class="nowo-ui-code">/whatsapp/webhook</code> (unsigned allowed in this mock demo).</p>
+        </div>
     </section>
 {% endblock %}

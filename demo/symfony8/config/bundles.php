@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Nowo\FormKitBundle\NowoFormKitBundle;
 use Nowo\HotReloadBundle\NowoHotReloadBundle;
 use Nowo\TwigInspectorBundle\NowoTwigInspectorBundle;
+use Nowo\UiKitBundle\NowoUiKitBundle;
 use Nowo\WhatsappBusinessBundle\WhatsappBusinessBundle;
 use Symfony\Bundle\DebugBundle\DebugBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
@@ -17,6 +19,8 @@ return [
     DebugBundle::class             => ['dev' => true, 'test' => true],
     WebProfilerBundle::class       => ['dev' => true, 'test' => true],
     WhatsappBusinessBundle::class  => ['all' => true],
+    NowoFormKitBundle::class       => ['all' => true],
+    NowoUiKitBundle::class         => ['all' => true],
     NowoHotReloadBundle::class     => ['dev' => true, 'test' => true],
     NowoTwigInspectorBundle::class => ['dev' => true, 'test' => true],
     TwigExtraBundle::class         => ['all' => true],

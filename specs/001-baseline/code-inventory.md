@@ -1,6 +1,6 @@
 # Code inventory (baseline)
 
-**Last audited:** 2026-10-20  
+**Last audited:** 2026-11-17  
 **Production units:** 60 (every file tracked under `src/`; audit: `git ls-files src | wc -l`)  
 **Spec:** [`spec.md`](spec.md)
 
@@ -42,6 +42,7 @@ Categorized `src/` map for WhatsappBusinessBundle; paths are relative to `src/`.
 | `Transport/CloudApiTransport.php` | Real Graph transport | FR-HTTP-004 |
 | `Transport/MockTransport.php` | Mock transport with bounded recordings | FR-HTTP-004, FR-RUN-001 |
 | `Transport/TransportInterface.php` | Transport contract (host-pluggable SPI) | FR-HTTP-004, FR-HTTP-005 |
+| `Transport/ProfileAwareTransportInterface.php` | Optional SPI: one host transport service shared by several `custom` profiles gets the profile through `forProfile()` (1.4) | FR-HTTP-006 |
 
 ## Event subscribers
 
@@ -121,9 +122,9 @@ Categorized `src/` map for WhatsappBusinessBundle; paths are relative to `src/`.
 
 | Category | Files | Mapped |
 | --- | ---: | ---: |
-| Bundle / DI and config | 9 | 9 |
+| Bundle / DI and config | 10 | 10 |
 | Client | 4 | 4 |
-| HTTP and transport | 8 | 8 |
+| HTTP and transport | 9 | 9 |
 | Event subscribers | 1 | 1 |
 | Messages | 15 | 15 |
 | Templates | 2 | 2 |
@@ -131,4 +132,4 @@ Categorized `src/` map for WhatsappBusinessBundle; paths are relative to `src/`.
 | Events | 5 | 5 |
 | Messenger and console | 4 | 4 |
 | Exceptions | 6 | 6 |
-| **Total production files (`git ls-files src`)** | **60** | **60** |
+| **Total production files (`git ls-files src`)** | **62** | **62** |
