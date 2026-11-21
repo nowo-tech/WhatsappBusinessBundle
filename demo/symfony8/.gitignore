@@ -31,3 +31,8 @@
 *.rar
 *.7z
 /config/reference.php
+
+# Playwright (REQ-DEMO-013)
+/e2e/node_modules/
+/e2e/test-results/
+/e2e/playwright-report/

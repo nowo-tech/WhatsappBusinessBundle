@@ -16,7 +16,7 @@ class DemoControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'WhatsappBusinessBundle');
         self::assertSelectorExists('form');
-        self::assertSelectorExists('[data-testid="demo-masthead"]');
+        self::assertSelectorExists('[data-testid="demo-platform"]');
     }
 
     public function testSendText(): void
