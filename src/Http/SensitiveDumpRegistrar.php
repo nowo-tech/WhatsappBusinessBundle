@@ -48,7 +48,7 @@ final class SensitiveDumpRegistrar
         foreach ($classes as $class) {
             // Process-global VarDumper map; values are static callables, not request state.
             // @phpstan-ignore frankenphp.worker.noMutableStaticProperty
-            AbstractCloner::$defaultCasters[$class] = self::castUsingDebugInfo(...);
+            AbstractCloner::$defaultCasters[$class] = self::castUsingDebugInfo(...); // @igor-ignore - Idempotent process-wide caster map (same static callable on every call), no request data.
         }
     }
 
