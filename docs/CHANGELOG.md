@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- PHP 8.6 and Symfony 8.2 support in CI (both stable, no allowed failures): `composer.json` allows PHP below 8.7 (was below 8.6) and a forward-compatibility workflow runs the suite on PHP 8.6 and on Symfony 8.2.
 - Dev: Igor 0.11 (REQ-CS-008) — the idempotent `AbstractCloner::$defaultCasters` registration in `SensitiveDumpRegistrar` carries a documented `@igor-ignore` (false positive: same static callable on every boot, no request data). `igor-php/igor-php` accepts `^0.11.0` (supersedes #45).
 - Demo: runs in UiKit's demo platform shell (`nowo-tech/ui-kit-bundle` ^2.60); the demo's own header is gone and the pages use the shell page headers and section cards. The demo gains a minimal Playwright e2e (`make test-e2e`). Demo only, no bundle change.
 - Demo: `nowo-tech/ui-kit-bundle` and `nowo-tech/form-kit-bundle` are required by the demo; the page renders in UiKit's admin layout (masthead, page header, cards, default theme, no CSS framework) and the send form is a FormKit form (profile `demo`) instead of a plain `AbstractType` with a hand-written `<button>` (REQ-DEMO-014, REQ-DEMO-015).

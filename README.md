@@ -96,7 +96,7 @@ final class NotifyCustomer
 
 ## Requirements
 
-- PHP >= 8.2, < 8.6
+- PHP >= 8.2, < 8.7
 - Symfony 6.4+, 7.0+, 8.0, or 8.1 (see `composer.json`; CI exercises 6.4, 7.0, 7.4, 8.0, and 8.1)
 - A WhatsApp Business Cloud API app (phone number id + access token) for the `cloud` transport
 
